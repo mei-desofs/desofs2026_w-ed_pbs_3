@@ -33,21 +33,22 @@ def refresh():
     new_token = user_service.refreshtoken(identity)
 
     resp = jsonify({"msg": "token refreshed"})
-
     set_access_cookies(resp, new_token)
 
     return resp
     
-@user_bp.route('/mainpage', methods = ['POST', 'GET'])
+@user_bp.route('/mainpage', methods = ['GET'])
 @jwt_required()
 def mainpage():
-    try:
-        current_user = get_jwt_identity()
-        return jsonify({"logged_as": current_user}), 200
-    
-    except AuthenticationError:
-        return jsonify({"error": "Token not found"}), 401
-    
+    if request.method == 'GET':
+        return render_template('/mainpage.html')
+
+#Talvez venha a remover, serve apenas para testar a mainpage
+@user_bp.route('/get_current_user')
+@jwt_required()
+def get_current_user():
+    return jsonify({"logged_as": get_jwt_identity()}), 200
+
 @user_bp.route('/logout',methods = ['POST'])
 @jwt_required()
 def logout():
