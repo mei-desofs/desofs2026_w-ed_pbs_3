@@ -1,26 +1,30 @@
-from flask import Flask, jsonify, request, Blueprint
+from flask import Flask, jsonify, request, Blueprint, render_template, redirect, url_for
 from flask_jwt_extended import unset_access_cookies, jwt_required, get_jwt_identity, set_access_cookies, set_refresh_cookies
 from src.API.Application.user_service import UserService, AuthenticationError
 
 user_service = UserService()
 
-user_bp = Blueprint("users",__name__)
-@user_bp.route('/login', methods = ['POST'])
+user_bp = Blueprint("users",__name__, template_folder='./user_templates')
+@user_bp.route('/', methods = ['POST', 'GET'])
 def user_login():
-    data = request.json
+    if request.method == 'GET':
+        return render_template('/login.html')
+    
+    #auth
+    data = request.get_json()
     try:
-        resp = jsonify({"msg": "Login Successful"})
+        resp = jsonify({"redirect": url_for("users.mainpage")})
         a_token, r_token = user_service.authenticate(data['email'], data['password'])
         set_access_cookies (resp, a_token)
         set_refresh_cookies (resp, r_token)
-
-        return resp, 200
+    
+        return resp
     except AuthenticationError:
         return jsonify({"error": "Credenciais inválidas"}), 401
 
 
 #É necessário criar função JS que chame este endpoint para atualizar o token
-@user_bp.route('/refresh', methods=['POST'])
+@user_bp.route('/refresh', methods=['POST', 'GET'])
 @jwt_required(refresh=True)
 def refresh():
 
@@ -34,7 +38,7 @@ def refresh():
 
     return resp
     
-@user_bp.route('/mainpage', methods = ['POST'])
+@user_bp.route('/mainpage', methods = ['POST', 'GET'])
 @jwt_required()
 def mainpage():
     try:

@@ -12,6 +12,7 @@ class UserService:
         ARGS: email_str (str), password_raw(str)
         returns: token de acesso e refresh token caso a validação seja bem sucedida
         """
+        #TODO Fazer Alteração quando lógica de BD for implementada
 
         #!! Verificação manual a ser alterada
         if email_str == 'admin' and password_raw == 'password':
