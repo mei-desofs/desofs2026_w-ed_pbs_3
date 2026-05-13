@@ -2,9 +2,8 @@ version: "3.9"
 
 services:
 
-  # FLASK API
+  # FLASK API (WEB)
   web:
-
     # constrói imagem a partir da pasta web (pasta do diretório do repositório)
     build: ./web
 
@@ -15,10 +14,8 @@ services:
     ports:
       - "5000:5000"
 
-    # garante que db e workspace arrancam antes
     depends_on:
       - db
-      - workspace
 
     # variáveis de ambiente vindas do .env
     environment:
@@ -26,29 +23,35 @@ services:
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
       DB_NAME: ${DB_NAME}
-
       WORKSPACE_URL: ${WORKSPACE_URL}
 
-  # WORKSPACE SERVER
-  workspace:
 
+  # WORKSPACE SERVICE
+  workspace:
     # constrói imagem a partir da pasta workspace (pasta do diretório do repositório)
     build: ./workspace
 
     # nome do container
     container_name: workspace_server
 
+    # reinicia automaticamente se o container falhar
+    restart: always
+
     # porta interna do serviço
     ports:
       - "8000:8000"
 
+    # garante que a base de dados está disponível antes do workspace arrancar
+    depends_on:
+      - db
+
     # persistência de ficheiros dos utilizadores
     volumes:
-      - workspace_data:/data/workspaces
+      - workspace_data:/workspaces
+
 
   # MYSQL DATABASE
   db:
-
     # imagem oficial MySQL
     image: mysql:8
 
@@ -63,7 +66,7 @@ services:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
       MYSQL_DATABASE: ${DB_NAME}
 
-    # porta MySQL (opcional para debug)
+    # porta MySQL
     ports:
       - "3306:3306"
 
@@ -72,7 +75,26 @@ services:
       - mysql_data:/var/lib/mysql
       - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
 
+
+  # BACKUP SERVICE
+  backup:
+    build: ./backup
+    container_name: backup_service
+
+    restart: always
+
+    depends_on:
+      - db
+      - workspace
+
+    volumes:
+      - mysql_data:/db
+      - workspace_data:/workspaces
+      - backup_data:/backups
+
+
 # VOLUMES (dados persistentes)
 volumes:
   mysql_data:
   workspace_data:
+  backup_data:
