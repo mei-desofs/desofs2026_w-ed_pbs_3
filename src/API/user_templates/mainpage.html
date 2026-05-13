@@ -2,19 +2,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles/login.css')}}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <script>
+    const REFRESH_URL = "{{ url_for('users.refresh') }}";
+    const LOGIN_URL = "{{ url_for('users.user_login') }}";
+    </script>
+    <script src="{{ url_for('users.static', filename='js/api.js') }}"></script>
     <title>MarkDawn</title>
 </head>
 
 <body>
-    <h1>Bem vindo, <span id="userEmail"></span></h1>
+    <h1>Bem vindo, <spanr id="userEmail"></span></h1>
 </body>
 
 <script>
-    fetch("{{ url_for('users.get_current_user') }}")
+    apiRequest("{{ url_for('users.get_current_user') }}")
         .then(res => res.json())
         .then(data => {
-            document.getElementById("userEmail").textContent = data.logged_as;
-        });
+            if (data && data.logged_as) {
+                document.getElementById("userEmail").textContent = data.logged_as;
+            }
+        })
+        .catch(err => console.error("Erro na autenticação:", err));
+
 </script>

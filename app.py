@@ -10,6 +10,7 @@ app = Flask(__name__)
 app.config["JWT_SECRET_KEY"] = "super-secret-key"
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(seconds=5)
 app.config["JWT_TOKEN_LOCATION"] = ["cookies"]
+app.config["JWT_COOKIE_CSRF_PROTECT"] = False
 app.config["JWT_COOKIE_HTTPONLY"] = True
 app.config["JWT_COOKIE_SAMESITE"] = "Strict"
 app.config["JWT_REFRESH_COOKIE_PATH"] = "/refresh"

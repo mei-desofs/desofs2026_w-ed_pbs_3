@@ -4,7 +4,7 @@ from src.API.Application.user_service import UserService, AuthenticationError
 
 user_service = UserService()
 
-user_bp = Blueprint("users",__name__, template_folder='./user_templates')
+user_bp = Blueprint("users",__name__, template_folder='./user_templates', static_folder='./user_templates')
 @user_bp.route('/', methods = ['POST', 'GET'])
 def user_login():
     if request.method == 'GET':
@@ -24,7 +24,7 @@ def user_login():
 
 
 #É necessário criar função JS que chame este endpoint para atualizar o token
-@user_bp.route('/refresh', methods=['POST', 'GET'])
+@user_bp.route('/refresh', methods=['POST'])
 @jwt_required(refresh=True)
 def refresh():
 
@@ -33,19 +33,18 @@ def refresh():
     new_token = user_service.refreshtoken(identity)
 
     resp = jsonify({"msg": "token refreshed"})
-    set_access_cookies(resp, new_token)
+    set_access_cookies(resp, new_token, max_age=900)
 
     return resp
     
 @user_bp.route('/mainpage', methods = ['GET'])
-@jwt_required()
 def mainpage():
     if request.method == 'GET':
         return render_template('/mainpage.html')
 
 #Talvez venha a remover, serve apenas para testar a mainpage
 @user_bp.route('/get_current_user')
-@jwt_required()
+@jwt_required(optional=True)
 def get_current_user():
     return jsonify({"logged_as": get_jwt_identity()}), 200
 
