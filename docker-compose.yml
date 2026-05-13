@@ -1,0 +1,78 @@
+version: "3.9"
+
+services:
+
+  # FLASK API
+  web:
+
+    # constrói imagem a partir da pasta web (pasta do diretório do repositório)
+    build: ./web
+
+    # nome do container (apenas identificação)
+    container_name: flask_api
+
+    # expõe API na porta 5000
+    ports:
+      - "5000:5000"
+
+    # garante que db e workspace arrancam antes
+    depends_on:
+      - db
+      - workspace
+
+    # variáveis de ambiente vindas do .env
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+
+      WORKSPACE_URL: ${WORKSPACE_URL}
+
+  # WORKSPACE SERVER
+  workspace:
+
+    # constrói imagem a partir da pasta workspace (pasta do diretório do repositório)
+    build: ./workspace
+
+    # nome do container
+    container_name: workspace_server
+
+    # porta interna do serviço
+    ports:
+      - "8000:8000"
+
+    # persistência de ficheiros dos utilizadores
+    volumes:
+      - workspace_data:/data/workspaces
+
+  # MYSQL DATABASE
+  db:
+
+    # imagem oficial MySQL
+    image: mysql:8
+
+    # nome do container
+    container_name: mysql_db
+
+    # reinicia automaticamente se falhar
+    restart: always
+
+    # configuração inicial da base de dados
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+
+    # porta MySQL (opcional para debug)
+    ports:
+      - "3306:3306"
+
+    # persistência da base de dados + init script
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+# VOLUMES (dados persistentes)
+volumes:
+  mysql_data:
+  workspace_data:
