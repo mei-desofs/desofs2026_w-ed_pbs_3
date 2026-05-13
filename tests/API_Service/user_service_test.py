@@ -2,6 +2,7 @@ import pytest
 from flask import Flask
 from flask_jwt_extended import JWTManager
 from src.API.Application.user_service import UserService, AuthenticationError 
+from src.domain.user.value_objects import HashedPassword
 
 
 # Fixture: Configura uma app Flask mínima para o JWT funcionar nos testes
@@ -43,3 +44,17 @@ def test_refresh_token_success(app, user_service):
         
         assert new_token is not None
         assert isinstance(new_token, str)
+
+
+def test_password_at_least_64_characters_permitted(app):
+    #TODO implmentar testes com integração para BD
+    with app.app_context():
+        # Password longa (ex: 70 caracteres)
+        long_password = "a" * 70 
+        
+        # vo não deve levantar nenhuma exceção
+        vo = HashedPassword.create_from_plain_text(long_password)
+        
+        # O hash deve ser gerado e ser válido para a password longa
+        assert vo.value is not None
+        assert HashedPassword.verify(vo.value, long_password) is True
