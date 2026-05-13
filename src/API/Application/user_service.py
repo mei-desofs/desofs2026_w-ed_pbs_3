@@ -13,6 +13,7 @@ class UserService:
         returns: token de acesso e refresh token caso a validação seja bem sucedida
         """
         #TODO Fazer Alteração quando lógica de BD for implementada
+        #TODO inseir tempo de duração de token
 
         #!! Verificação manual a ser alterada
         if email_str == 'admin' and password_raw == 'password':
