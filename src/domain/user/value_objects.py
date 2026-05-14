@@ -1,7 +1,29 @@
 from werkzeug.security import generate_password_hash, check_password_hash
+import re
 class PasswordError(Exception): pass
 class LengthError(PasswordError): pass
 class RockError(PasswordError): pass
+class InvalidUserNameError(Exception):pass
+
+class UserName:
+    def __init__(self, user_name:str):
+        self.user_name = user_name
+
+    @classmethod
+    def validate_and_create(cls, user_name: str):
+        username = user_name.strip()
+
+        if len(username) < 6 or len(username) > 50:
+            raise InvalidUserNameError ("User name inválido, deve ser entre 6 e 50 characteres ")
+        if not re.match(r"^\w+$", username):
+            raise InvalidUserNameError("Username deve conter apenas letras, números e underscores.")
+        
+        return cls(username)
+
+    @property
+    def value(self):
+        return self.value
+
 
 class HashedPassword:
     COMMON_PASSWORDS = set()
