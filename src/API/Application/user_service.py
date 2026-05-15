@@ -1,9 +1,8 @@
 from flask import Flask, jsonify, request
 import json
 from flask_jwt_extended import create_access_token, create_refresh_token
-from src.domain.user.value_objects import InvalidUserNameError, PasswordError
 from src.domain.user.entities import User
-
+from src.domain.user.value_objects import InvalidUserNameError, PasswordError
 class AuthenticationError(Exception):
     pass
 

@@ -22,14 +22,15 @@ class UserName:
 
     @property
     def value(self):
-        return self.value
+        return self.user_name
 
 
 class HashedPassword:
     COMMON_PASSWORDS = set()
     try:
-        with open('rockyou.txt') as f:
+        with open('src/domain/user/rockyou.txt', encoding="latin-1") as f:
             COMMON_PASSWORDS = {line.strip() for line in f}
+            print("Lista de passwords comuns Encontrado")
     except FileNotFoundError:
         print("Aviso: Lista de passwords comuns não encontrada.")
 

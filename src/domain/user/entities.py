@@ -1,5 +1,5 @@
 import uuid
-from value_objects import UserName, HashedPassword
+from .value_objects import UserName, HashedPassword
 
 class User:
     def __init__(self, user_id: uuid.UUID, user_name: UserName, password: HashedPassword):
