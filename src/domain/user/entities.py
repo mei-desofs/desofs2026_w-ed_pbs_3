@@ -4,24 +4,24 @@ from .value_objects import UserName, HashedPassword
 class User:
     def __init__(self, user_id: uuid.UUID, user_name: UserName, password: HashedPassword):
         self.id = user_id
-        self._user_name = user_name
-        self._password = password
+        self._username = user_name
+        self._password_hash = password
 
     @classmethod
-    def create(cls, user_name_str: str, plain_password_str: str):
+    def create(cls, username_str: str, plain_password_str: str):
         user_id = uuid.uuid4()
-        user_name = UserName.validate_and_create(user_name_str)
-        password = HashedPassword.create_from_plain_text(plain_password_str)
+        username = UserName.validate_and_create(username_str)
+        password_hash = HashedPassword.create_from_plain_text(plain_password_str)
         
-        return cls(user_id, user_name, password)
+        return cls(user_id, username.value, password_hash.value)
 
     @property
-    def user_name(self) -> str:
-        return self._user_name.value
+    def username(self) -> str:
+        return self._username.value
 
     @property
-    def password_hash(self) -> str:
-        return self._password.value
+    def hash_of_password(self) -> str:
+        return self._password_hash.value
 
     def __repr__(self):
-        return f"<User {self.id} | {self.user_name}>"
+        return f"<User {self.id} | {self.username}>"
