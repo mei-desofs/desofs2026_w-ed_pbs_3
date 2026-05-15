@@ -23,6 +23,27 @@ def user_login():
         return jsonify({"error": "Credenciais inválidas"}), 401
 
 
+@user_bp.route('/regist', methods = ['POST', 'GET'])
+def regist():
+    if request.method == 'GET':
+        return render_template('/regist.html')
+    
+    #criação
+    data = request.get_json()
+    
+    resp = jsonify({"redirect": url_for("users.user_login")})
+    return resp, 200
+    try:
+        resp = jsonify({"redirect": url_for("users.mainpage")})
+        a_token, r_token = user_service.authenticate(data['email'], data['password'])
+        set_access_cookies (resp, a_token)
+        set_refresh_cookies (resp, r_token)
+    
+        return resp
+    except AuthenticationError:
+        return jsonify({"error": "Credenciais inválidas"}), 401
+
+
 #É necessário criar função JS que chame este endpoint para atualizar o token
 @user_bp.route('/refresh', methods=['POST'])
 @jwt_required(refresh=True)

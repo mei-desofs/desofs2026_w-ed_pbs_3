@@ -43,6 +43,7 @@ jwt = JWTManager(app)
 app.register_blueprint(user_bp)
 
 #Teste de DB
+"""
 start_mappers()
 mapper_registry.metadata.create_all(engine)
 
@@ -52,7 +53,7 @@ session.add(new_user)
 session.commit()
 print("User inserido com sucesso!")
 session.close()
-
+"""
 
 
 if __name__ == "__main__":
