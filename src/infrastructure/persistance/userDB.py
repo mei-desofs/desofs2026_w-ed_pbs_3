@@ -1,7 +1,13 @@
 from sqlalchemy import create_engine, Table, Column, String, MetaData
 from sqlalchemy.orm import registry, sessionmaker
 from src.domain.user.entities import User
+from connection import (engine, SessionLocal)
 import os
+
+class UserPersistanceError(Exception):
+    pass
+class RegistingUserError(UserPersistanceError):pass
+
 mapper_registry = registry()
 metadata = MetaData()
 
@@ -21,3 +27,32 @@ def start_mappers():
             "_username": user_table.c.username,
             "_password_hash": user_table.c.password_hash,
         })
+
+def create_user(new_user:User):
+    start_mappers()
+    try:
+        session = SessionLocal()
+        session.add(new_user)
+        session.commit()
+        print("User inserido com sucesso!")
+        session.close()
+    except RegistingUserError:
+        print("Erro ao inserir utilizado na BD")
+
+def find_by_username(username:str) -> bool:
+    start_mappers()
+    session = SessionLocal()
+    try:
+        user = (
+            session.query(User)
+            .filter(User._username == username)
+            .first()
+        )
+        if user: return True
+        else: return False
+    except Exception as e:
+        print(f"Erro ao procurar utilizador: {e}")
+        return None
+
+    finally:
+        session.close()

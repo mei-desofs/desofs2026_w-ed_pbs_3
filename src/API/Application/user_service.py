@@ -3,6 +3,7 @@ import json
 from flask_jwt_extended import create_access_token, create_refresh_token
 from src.domain.user.entities import User
 from src.domain.user.value_objects import InvalidUserNameError, PasswordError
+from src.infrastructure.persistance.userDB import find_by_username, create_user, UserPersistanceError
 class AuthenticationError(Exception):
     pass
 
@@ -41,26 +42,32 @@ class UserService:
         returns: new_user ou outputs de excessões
         """
         try:
-            #Criação e validação no Aggregate Root
+            # Criação e validação no Aggregate Root
             new_user = User.create(username_raw, password_raw)
 
+            # Usar propriedade pública se existir, caso contrário mantém o atributo
+            username_val = getattr(new_user, 'username', new_user._username)
 
-            #TODO Implementar restante lógica de validação como verificação de password com a repetição e verficações de BD
-            # 2. Verificação de unicidade (Lógica de Negócio de nível de Serviço)
-            #Vericiar se o username já existe na BD
-            # if self.user_repository.find_by_username(new_user.user_name):
-            #     raise InvalidUserNameError("Este nome de utilizador já está ocupado.")
-
-            # 3. Persistência (Simulada por agora)
-            # self.user_repository.save(new_user)
+            # TODO: Implementar registo de tokens
+            # Verificação de duplicidade de username
+            if find_by_username(username_val):
+                raise InvalidUserNameError("Este nome de utilizador já está ocupado.")
             
-            print(f"[LOG] Utilizador {new_user.user_name} registado com sucesso.")
+            # Persistência
+            try:
+                create_user(new_user)
+            except UserPersistanceError as e:
+                print(f"[ERROR] Falha na base de dados ao registar {username_val}: {e}")
+                raise Exception("Não foi possível persistir os dados do utilizador de momento.")
+            
+            print(f"[LOG] Utilizador {username_val} registado com sucesso.")
             return new_user
 
         except (InvalidUserNameError, PasswordError) as e:
-            # RELANÇAR as exceções de domínio para serem capturadas pelo Controller
+        # Relança os erros de domínio para que o Controller decida o status HTTP
             raise e
+        
         except Exception as e:
-            # Log de erros inesperados
+            # Log centralizado do erro real para auditoria interna (Prevenção de fuga de informação)
             print(f"[CRITICAL ERROR] Falha inesperada no registo: {e}")
             raise Exception("Ocorreu um erro interno no sistema.")

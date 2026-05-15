@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, request, Blueprint, render_template, redirect, url_for
 from flask_jwt_extended import unset_access_cookies, jwt_required, get_jwt_identity, set_access_cookies, set_refresh_cookies
 from src.API.Application.user_service import UserService, AuthenticationError
-from src.domain.user.value_objects import InvalidUserNameError, LengthError, RockError
+from src.domain.user.value_objects import InvalidUserNameError, LengthError, RockError, PasswordError
 user_service = UserService()
 
 user_bp = Blueprint("users",__name__, template_folder='./user_templates', static_folder='./user_templates')
@@ -23,25 +23,38 @@ def user_login():
         return jsonify({"error": "Credenciais inválidas"}), 401
 
 
-@user_bp.route('/regist', methods = ['POST', 'GET'])
+@user_bp.route('/regist', methods=['POST', 'GET'])
 def regist():
     if request.method == 'GET':
         return render_template('/regist.html')
     
-    #criação
-    data = request.get_json()
+    # Validação de JSON
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({"error": "O corpo da requisição deve ser um JSON válido."}), 400
+
+    username = data.get('username')
+    password = data.get('password')
     
-    resp = jsonify({"redirect": url_for("users.user_login")})
-    return resp, 200
+    if not username or not password:
+        return jsonify({"error": "Os campos 'username' e 'password' são obrigatórios."}), 400
+    
     try:
-        resp = jsonify({"redirect": url_for("users.mainpage")})
-        a_token, r_token = user_service.authenticate(data['email'], data['password'])
-        set_access_cookies (resp, a_token)
-        set_refresh_cookies (resp, r_token)
-    
-        return resp
-    except AuthenticationError:
-        return jsonify({"error": "Credenciais inválidas"}), 401
+       #registo
+        new_user = user_service.register_user(username, password)
+        resp = jsonify({"redirect": url_for("users.user_login")})
+        return resp, 201
+
+    except InvalidUserNameError as e:
+        # 409 Conflict é o status para duplicação de usernames
+        return jsonify({"error": str(e)}), 409
+
+    except PasswordError as e:
+        return jsonify({"error": str(e)}), 400
+
+    except Exception as e:
+        return jsonify({"error": "Ocorreu um erro interno no servidor. Por favor, tente mais tarde."}), 500
+
 
 
 #É necessário criar função JS que chame este endpoint para atualizar o token
