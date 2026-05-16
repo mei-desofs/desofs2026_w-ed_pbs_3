@@ -9,7 +9,7 @@ class User:
 
     @classmethod
     def create(cls, username_str: str, plain_password_str: str):
-        user_id = uuid.uuid4()
+        user_id = str(uuid.uuid4())
         username = UserName.validate_and_create(username_str)
         password_hash = HashedPassword.create_from_plain_text(plain_password_str)
         

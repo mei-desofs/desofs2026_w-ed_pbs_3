@@ -4,8 +4,12 @@ FROM python:3.11
 # diretório de trabalho dentro do container
 WORKDIR /app
 
-# instala cliente MySQL (necessário para mysqldump)
-RUN apt-get update && apt-get install -y mysql-client
+# Instala dependências de compilação e o cliente MySQL 
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libpq-dev \
+    default-mysql-client \
+    && rm -rf /var/lib/apt/lists/*
 
 # copia ficheiros do backup para o container
 COPY . .

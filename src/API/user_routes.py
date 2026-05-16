@@ -2,6 +2,7 @@ from flask import Flask, jsonify, request, Blueprint, render_template, redirect,
 from flask_jwt_extended import unset_access_cookies, jwt_required, get_jwt_identity, set_access_cookies, set_refresh_cookies
 from src.API.Application.user_service import UserService, AuthenticationError
 from src.domain.user.value_objects import InvalidUserNameError, LengthError, RockError, PasswordError
+import traceback
 user_service = UserService()
 
 user_bp = Blueprint("users",__name__, template_folder='./user_templates', static_folder='./user_templates')
@@ -53,6 +54,7 @@ def regist():
         return jsonify({"error": str(e)}), 400
 
     except Exception as e:
+        print(traceback.format_exc())
         return jsonify({"error": "Ocorreu um erro interno no servidor. Por favor, tente mais tarde."}), 500
 
 
