@@ -1,0 +1,100 @@
+version: "3.9"
+
+services:
+
+  # FLASK API (WEB)
+  web:
+    # constrói imagem a partir da pasta web (pasta do diretório do repositório)
+    build: ./web
+
+    # nome do container (apenas identificação)
+    container_name: flask_api
+
+    # expõe API na porta 5000
+    ports:
+      - "5000:5000"
+
+    depends_on:
+      - db
+
+    # variáveis de ambiente vindas do .env
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      WORKSPACE_URL: ${WORKSPACE_URL}
+
+
+  # WORKSPACE SERVICE
+  workspace:
+    # constrói imagem a partir da pasta workspace (pasta do diretório do repositório)
+    build: ./workspace
+
+    # nome do container
+    container_name: workspace_server
+
+    # reinicia automaticamente se o container falhar
+    restart: always
+
+    # porta interna do serviço
+    ports:
+      - "8000:8000"
+
+    # garante que a base de dados está disponível antes do workspace arrancar
+    depends_on:
+      - db
+
+    # persistência de ficheiros dos utilizadores
+    volumes:
+      - workspace_data:/workspaces
+
+
+  # MYSQL DATABASE
+  db:
+    # imagem oficial MySQL
+    image: mysql:8
+
+    # nome do container
+    container_name: mysql_db
+
+    # reinicia automaticamente se falhar
+    restart: always
+
+    # configuração inicial da base de dados
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+
+    # porta MySQL
+    ports:
+      - "3306:3306"
+
+    # persistência da base de dados + init script
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+
+  # BACKUP SERVICE
+  backup:
+    build: ./backup
+    container_name: backup_service
+
+    restart: always
+
+    depends_on:
+      - db
+      - workspace
+
+    volumes:
+      - mysql_data:/db
+      - workspace_data:/workspaces
+      - backup_data:/backups
+
+
+# VOLUMES (dados persistentes)
+volumes:
+  mysql_data:
+  workspace_data:
+  backup_data:

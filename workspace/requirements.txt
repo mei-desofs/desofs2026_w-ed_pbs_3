@@ -1,0 +1,4 @@
+Requirements para a máquina web aqui
+
+Seriam:
+flask
