@@ -13,20 +13,24 @@ metadata = MetaData()
 
 user_table = Table(
     "users",
-    mapper_registry.metadata,
+    metadata,
     Column("id", String(36), primary_key=True),
     Column("username", String(50), nullable=False, unique=True),
     Column("password_hash", String(256), nullable=False),
 )
+_mapper_configured = False
 
 def start_mappers():
+    global _mapper_configured
+    if _mapper_configured:
+        return
     # Só mapeia uma vez
-    if not mapper_registry.mappers:
-        mapper_registry.map_imperatively(User, user_table, properties={
+    mapper_registry.map_imperatively(User, user_table, properties={
             "id": user_table.c.id,
             "_username": user_table.c.username,
             "_password_hash": user_table.c.password_hash,
         })
+    _mapper_configured = True
 
 def create_user(new_user:User):
     start_mappers()

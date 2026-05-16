@@ -4,6 +4,8 @@ from flask_jwt_extended import create_access_token, create_refresh_token
 from src.domain.user.entities import User
 from src.domain.user.value_objects import InvalidUserNameError, PasswordError
 from src.infrastructure.persistance.userDB import find_by_username, create_user, UserPersistanceError
+import traceback
+
 class AuthenticationError(Exception):
     pass
 
@@ -70,4 +72,6 @@ class UserService:
         except Exception as e:
             # Log centralizado do erro real para auditoria interna (Prevenção de fuga de informação)
             print(f"[CRITICAL ERROR] Falha inesperada no registo: {e}")
+            print(traceback.format_exc())
+
             raise Exception("Ocorreu um erro interno no sistema.")

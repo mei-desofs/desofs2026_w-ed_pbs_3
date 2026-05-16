@@ -5,14 +5,16 @@ services:
   # FLASK API (WEB)
   web:
     # constrói imagem a partir da pasta web (pasta do diretório do repositório)
-    build: ./web
+    build:
+      context: ..
+      dockerfile: docker/web/Dockerfile
 
     # nome do container (apenas identificação)
     container_name: flask_api
 
     # expõe API na porta 5000
     ports:
-      - "5000:5000"
+      - "5003:5003"
 
     depends_on:
       - db
@@ -29,7 +31,9 @@ services:
   # WORKSPACE SERVICE
   workspace:
     # constrói imagem a partir da pasta workspace (pasta do diretório do repositório)
-    build: ./workspace
+    build:
+      context: ..
+      dockerfile: docker/workspace/Dockerfile
 
     # nome do container
     container_name: workspace_server
@@ -68,7 +72,7 @@ services:
 
     # porta MySQL
     ports:
-      - "3306:3306"
+      - "3307:3306"
 
     # persistência da base de dados + init script
     volumes:
@@ -78,14 +82,16 @@ services:
 
   # BACKUP SERVICE
   backup:
-    build: ./backup
+    build:
+      context: ..
+      dockerfile: docker/backup/Dockerfile
     container_name: backup_service
 
     restart: always
 
     depends_on:
       - db
-      - workspace
+      #- workspace
 
     volumes:
       - mysql_data:/db
