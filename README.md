@@ -37,7 +37,7 @@
 │   │       └── value_objects.py  # DocumentTitle, MarkdownContent, FilePath
 │   │
 │   ├── infrastructure/           # Detalhes de implementação (Adapters / Persistence)
-│   │   ├── persistence/          # Repositórios (SQLAlchemy)
+│   │   ├── persistence/          # Repositórios (SQLAlchemy / PostgreSQL)
 │   │   └── filesystem/           # Integração com o sistema de ficheiros Linux
 │   │
 │   └── shared/                   # Código partilhado (utils, exceções, helpers)
