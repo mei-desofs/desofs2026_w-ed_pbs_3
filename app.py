@@ -2,9 +2,18 @@ from flask import Flask, request, jsonify, blueprints
 from flask_jwt_extended import JWTManager
 from src.API.user_routes import user_bp
 from datetime import timedelta
-
+from dotenv import load_dotenv
+from connection import engine
+from connection import engine,SessionLocal
 
 app = Flask(__name__)
+
+from src.infrastructure.persistance.userDB import (start_mappers,mapper_registry)
+# Inicializar ORM
+start_mappers()
+# Criar tabelas
+mapper_registry.metadata.create_all(engine)
+
 
 # inicialização JWT
 app.config["JWT_SECRET_KEY"] = "super-secret-key"
@@ -23,10 +32,5 @@ jwt = JWTManager(app)
 # definição de blueprints
 app.register_blueprint(user_bp)
 
-@app.route('/teste', methods=["GET"])
-def get_teste():
-    return jsonify("sopa")
-
 if __name__ == "__main__":
     app.run(debug=True, host = "0.0.0.0", port = "5003")
-

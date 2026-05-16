@@ -18,7 +18,7 @@
 │   │   ├── workspace_routes.py
 │   │   └── document_routes.py
 │   │
-│   ├── application/              # Camada de Aplicação (Casos de Uso / Services)
+│   ├── application/              # Camada de Aplicação (Services)
 │   │   ├── user_service.py
 │   │   ├── workspace_service.py
 │   │   └── document_service.py
@@ -26,7 +26,7 @@
 │   ├── domain/                   # Camada de Domínio (Core do sistema)
 │   │   ├── user/
 │   │   │   ├── entities.py       # User (Aggregate Root)
-│   │   │   └── value_objects.py  # Email, HashedPass
+│   │   │   └── value_objects.py  # Username, HashedPass
 │   │   │
 │   │   ├── workspace/
 │   │   │   ├── entities.py       # Workspace (Root), Member (Entity)
