@@ -28,7 +28,6 @@ jobs:
           echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> docker/.env
           echo "DB_NAME=${{ secrets.DB_NAME }}" >> docker/.env
           echo "WORKSPACE_URL=${{ secrets.WORKSPACE_URL }}" >> docker/.env
-          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> docker/.env
           echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" >> docker/.env
 
       # Arrancar Docker Compose
