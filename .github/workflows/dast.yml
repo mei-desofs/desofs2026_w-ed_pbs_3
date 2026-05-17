@@ -38,7 +38,7 @@ jobs:
       # Esperar serviços arrancarem
       - name: Wait for services
         run: |
-          sleep 40
+          sleep 90
 
       # Verificar containers
       - name: Check running containers
