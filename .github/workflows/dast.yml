@@ -1,0 +1,60 @@
+name: DAST Security Scan
+
+on:
+  push:
+    branches:
+      - code-SAST-DAST
+
+  pull_request:
+    branches:
+      - main
+
+jobs:
+
+  dast:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # Checkout do repositório
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Criar .env temporário
+      - name: Create .env file
+        run: |
+          echo "DB_HOST=db" >> .env
+          echo "DB_USER=root" >> .env
+          echo "DB_PASSWORD=testpass" >> .env
+          echo "DB_NAME=DESOFS" >> .env
+          echo "WORKSPACE_URL=http://workspace:8000" >> .env
+
+      # Arrancar Docker Compose
+      - name: Start Docker Compose
+        run: |
+          docker compose -f docker/docker-compose.yml up -d
+
+      # Esperar serviços arrancarem
+      - name: Wait for services
+        run: |
+          sleep 40
+
+      # Verificar containers
+      - name: Check running containers
+        run: docker ps
+
+      # Verificar API
+      - name: Test Flask API
+        run: curl http://localhost:5003
+
+      # OWASP ZAP Baseline Scan
+      - name: OWASP ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: 'http://localhost:5003'
+
+      # Parar containers
+      - name: Stop containers
+        if: always()
+        run: |
+          docker compose -f docker/docker-compose.yml down
