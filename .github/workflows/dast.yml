@@ -35,22 +35,36 @@ jobs:
         run: |
           docker compose -f docker/docker-compose.yml up -d
 
-      # Esperar serviços arrancarem
-      - name: Wait for services
-        run: |
-          sleep 90
-
       # Verificar containers
       - name: Check running containers
         run: docker ps
 
+      # Esperar Flask arrancar
+      - name: Wait for Flask API
+        run: |
+          echo "Waiting for Flask API..."
+
+          for i in {1..30}; do
+
+            if curl -s http://localhost:5003 > /dev/null; then
+              echo "Flask API is up!"
+              exit 0
+            fi
+
+            echo "Still waiting..."
+            sleep 5
+
+          done
+
+          echo "Flask API failed to start."
+
+          docker logs flask_api
+
+          exit 1
+
       # Mostrar logs do Flask
       - name: Show web container logs
         run: docker logs flask_api
-
-      # Verificar API
-      - name: Test Flask API
-        run: curl http://localhost:5003
 
       # OWASP ZAP Baseline Scan
       - name: OWASP ZAP Baseline Scan
