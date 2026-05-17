@@ -43,6 +43,10 @@ jobs:
       - name: Check running containers
         run: docker ps
 
+      # Mostrar logs do Flask
+      - name: Show web container logs
+        run: docker logs flask_api
+
       # Verificar API
       - name: Test Flask API
         run: curl http://localhost:5003
