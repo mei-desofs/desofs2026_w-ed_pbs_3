@@ -72,7 +72,7 @@ jobs:
         with:
             target: 'http://localhost:5003'
             allow_issue_writing: false
-            artifact_name: zap-report
+            cmd_options: '-I'
 
       # Parar containers
       - name: Stop containers
