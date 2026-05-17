@@ -23,11 +23,13 @@ jobs:
       # Criar .env temporário
       - name: Create .env file
         run: |
-          echo "DB_HOST=db" >> docker/.env
-          echo "DB_USER=root" >> docker/.env
-          echo "DB_PASSWORD=testpass" >> docker/.env
-          echo "DB_NAME=DESOFS" >> docker/.env
-          echo "WORKSPACE_URL=http://workspace:8000" >> docker/.env
+          echo "DB_HOST=${{ secrets.DB_HOST }}" >> docker/.env
+          echo "DB_USER=${{ secrets.DB_USER }}" >> docker/.env
+          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> docker/.env
+          echo "DB_NAME=${{ secrets.DB_NAME }}" >> docker/.env
+          echo "WORKSPACE_URL=${{ secrets.WORKSPACE_URL }}" >> docker/.env
+          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> docker/.env
+          echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" >> docker/.env
 
       # Arrancar Docker Compose
       - name: Start Docker Compose
