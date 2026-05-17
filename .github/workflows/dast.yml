@@ -23,11 +23,11 @@ jobs:
       # Criar .env temporário
       - name: Create .env file
         run: |
-          echo "DB_HOST=db" >> .env
-          echo "DB_USER=root" >> .env
-          echo "DB_PASSWORD=testpass" >> .env
-          echo "DB_NAME=DESOFS" >> .env
-          echo "WORKSPACE_URL=http://workspace:8000" >> .env
+          echo "DB_HOST=db" >> docker/.env
+          echo "DB_USER=root" >> docker/.env
+          echo "DB_PASSWORD=testpass" >> docker/.env
+          echo "DB_NAME=DESOFS" >> docker/.env
+          echo "WORKSPACE_URL=http://workspace:8000" >> docker/.env
 
       # Arrancar Docker Compose
       - name: Start Docker Compose
