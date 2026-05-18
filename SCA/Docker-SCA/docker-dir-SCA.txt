@@ -1,0 +1,128 @@
+
+Report Summary
+
+┌──────────────────────┬────────────┬───────────────────┐
+│        Target        │    Type    │ Misconfigurations │
+├──────────────────────┼────────────┼───────────────────┤
+│ backup/Dockerfile    │ dockerfile │         3         │
+├──────────────────────┼────────────┼───────────────────┤
+│ web/Dockerfile       │ dockerfile │         3         │
+├──────────────────────┼────────────┼───────────────────┤
+│ workspace/Dockerfile │ dockerfile │         3         │
+└──────────────────────┴────────────┴───────────────────┘
+Legend:
+- '-': Not scanned
+- '0': Clean (no security findings detected)
+
+
+backup/Dockerfile (dockerfile)
+==============================
+Tests: 27 (SUCCESSES: 24, FAILURES: 3)
+Failures: 3 (UNKNOWN: 0, LOW: 1, MEDIUM: 0, HIGH: 2, CRITICAL: 0)
+
+DS-0002 (HIGH): Specify at least 1 USER command in Dockerfile with non-root user as argument
+══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+Running containers with 'root' user can lead to a container escape situation. It is a best practice to run containers as non-root users, which can be done by adding a 'USER' statement to the Dockerfile.
+
+See https://avd.aquasec.com/misconfig/ds-0002
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+DS-0026 (LOW): Add HEALTHCHECK instruction in your Dockerfile
+══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+You should add HEALTHCHECK instruction in your docker container images to perform the health check on running containers.
+
+See https://avd.aquasec.com/misconfig/ds-0026
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+DS-0029 (HIGH): '--no-install-recommends' flag is missed: 'apt-get update && apt-get install -y     gcc     libpq-dev     default-mysql-client     && rm -rf /var/lib/apt/lists/*'
+══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+'apt-get' install should use '--no-install-recommends' to minimize image size.
+
+See https://avd.aquasec.com/misconfig/ds-0029
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ backup/Dockerfile:8-12
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+   8 ┌ RUN apt-get update && apt-get install -y \
+   9 │     gcc \
+  10 │     libpq-dev \
+  11 │     default-mysql-client \
+  12 └     && rm -rf /var/lib/apt/lists/*
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+
+web/Dockerfile (dockerfile)
+===========================
+Tests: 27 (SUCCESSES: 24, FAILURES: 3)
+Failures: 3 (UNKNOWN: 0, LOW: 1, MEDIUM: 0, HIGH: 2, CRITICAL: 0)
+
+DS-0002 (HIGH): Specify at least 1 USER command in Dockerfile with non-root user as argument
+══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+Running containers with 'root' user can lead to a container escape situation. It is a best practice to run containers as non-root users, which can be done by adding a 'USER' statement to the Dockerfile.
+
+See https://avd.aquasec.com/misconfig/ds-0002
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+DS-0026 (LOW): Add HEALTHCHECK instruction in your Dockerfile
+══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+You should add HEALTHCHECK instruction in your docker container images to perform the health check on running containers.
+
+See https://avd.aquasec.com/misconfig/ds-0026
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+DS-0029 (HIGH): '--no-install-recommends' flag is missed: 'apt-get update && apt-get install -y     gcc     libpq-dev     && rm -rf /var/lib/apt/lists/*'
+══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+'apt-get' install should use '--no-install-recommends' to minimize image size.
+
+See https://avd.aquasec.com/misconfig/ds-0029
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ web/Dockerfile:7-10
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+   7 ┌ RUN apt-get update && apt-get install -y \
+   8 │     gcc \
+   9 │     libpq-dev \
+  10 └     && rm -rf /var/lib/apt/lists/*
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+
+workspace/Dockerfile (dockerfile)
+=================================
+Tests: 27 (SUCCESSES: 24, FAILURES: 3)
+Failures: 3 (UNKNOWN: 0, LOW: 1, MEDIUM: 0, HIGH: 2, CRITICAL: 0)
+
+DS-0002 (HIGH): Specify at least 1 USER command in Dockerfile with non-root user as argument
+══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+Running containers with 'root' user can lead to a container escape situation. It is a best practice to run containers as non-root users, which can be done by adding a 'USER' statement to the Dockerfile.
+
+See https://avd.aquasec.com/misconfig/ds-0002
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+DS-0026 (LOW): Add HEALTHCHECK instruction in your Dockerfile
+══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+You should add HEALTHCHECK instruction in your docker container images to perform the health check on running containers.
+
+See https://avd.aquasec.com/misconfig/ds-0026
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+DS-0029 (HIGH): '--no-install-recommends' flag is missed: 'apt-get update && apt-get install -y     gcc     libpq-dev     && rm -rf /var/lib/apt/lists/*'
+══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+'apt-get' install should use '--no-install-recommends' to minimize image size.
+
+See https://avd.aquasec.com/misconfig/ds-0029
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ workspace/Dockerfile:7-10
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+   7 ┌ RUN apt-get update && apt-get install -y \
+   8 │     gcc \
+   9 │     libpq-dev \
+  10 └     && rm -rf /var/lib/apt/lists/*
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+
