@@ -74,6 +74,7 @@ jobs:
             target: 'http://localhost:5003'
             allow_issue_writing: false
             cmd_options: '-I'
+            artifact_name: zap-scan
 
       # Parar containers
       - name: Stop containers
