@@ -1,0 +1,83 @@
+name: DAST Security Scan
+
+on:
+  push:
+    branches:
+      - code-SAST-DAST
+
+  pull_request:
+    branches:
+      - main
+
+jobs:
+
+  dast:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # Checkout do repositório
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Criar .env temporário
+      - name: Create .env file
+        run: |
+          echo "DB_HOST=${{ secrets.DB_HOST }}" >> docker/.env
+          echo "DB_USER=${{ secrets.DB_USER }}" >> docker/.env
+          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> docker/.env
+          echo "DB_NAME=${{ secrets.DB_NAME }}" >> docker/.env
+          echo "WORKSPACE_URL=${{ secrets.WORKSPACE_URL }}" >> docker/.env
+          echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" >> docker/.env
+
+      # Arrancar Docker Compose
+      - name: Start Docker Compose
+        run: |
+          docker compose -f docker/docker-compose.yml up -d
+
+      # Verificar containers
+      - name: Check running containers
+        run: docker ps
+
+      # Esperar Flask arrancar
+      - name: Wait for Flask API
+        run: |
+          echo "Waiting for Flask API..."
+
+          for i in {1..30}; do
+
+            if curl -s http://localhost:5003 > /dev/null; then
+              echo "Flask API is up!"
+              exit 0
+            fi
+
+            echo "Still waiting..."
+            sleep 5
+
+          done
+
+          echo "Flask API failed to start."
+
+          docker logs flask_api
+
+          exit 1
+
+      # Mostrar logs do Flask
+      - name: Show web container logs
+        run: docker logs flask_api
+
+      # OWASP ZAP Baseline Scan
+      - name: OWASP ZAP Baseline Scan
+        continue-on-error: true
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+            target: 'http://localhost:5003'
+            allow_issue_writing: false
+            cmd_options: '-I'
+            artifact_name: zap-scan
+
+      # Parar containers
+      - name: Stop containers
+        if: always()
+        run: |
+          docker compose -f docker/docker-compose.yml down
