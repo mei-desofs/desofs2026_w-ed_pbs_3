@@ -9,6 +9,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
       # Checkout
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -19,71 +20,45 @@ jobs:
         with:
           python-version: '3.11'
 
-      # Project Dependencies
+      # Dependencies
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # Security Tools
+      # Security tools
       - name: Install security tools
         run: |
           pip install bandit semgrep pip-audit safety
 
       # GITLEAKS
-      - name: Install Gitleaks
-        run: |
-          wget -qO gitleaks.tar.gz https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks_linux_x64.tar.gz
-          tar -xzf gitleaks.tar.gz
-          sudo mv gitleaks /usr/local/bin/
-
       - name: Run Gitleaks
-        run: |
-          mkdir -p reports
-          gitleaks detect \
-            --source . \
-            --report-format json \
-            --report-path reports/gitleaks-report.json \
-            || true
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # BANDIT
       - name: Run Bandit
         run: |
           mkdir -p reports
-          bandit -r . \
-            -f json \
-            -o reports/bandit-report.json \
-            || true
+          bandit -r . -f json -o reports/bandit-report.json || true
 
       # SEMGREP
       - name: Run Semgrep
         run: |
-          semgrep \
-            --config=p/owasp-top-ten \
-            --json \
-            --output=reports/semgrep-report.json \
-            . \
-            || true
+          semgrep --config=p/owasp-top-ten --json --output=reports/semgrep-report.json . || true
 
       # PIP-AUDIT
       - name: Run pip-audit
         run: |
-          pip-audit \
-            -r requirements.txt \
-            --format=json \
-            --output reports/pip-audit-report.json \
-            || true
+          pip-audit -r requirements.txt --format=json > reports/pip-audit-report.json || true
 
       # SAFETY
       - name: Run Safety
         run: |
-          safety scan \
-            --target requirements.txt \
-            --output json \
-            > reports/safety-report.json \
-            || true
+          safety check -r requirements.txt --json > reports/safety-report.json || true
 
-      # Upload All Reports
+      # Upload reports
       - name: Upload Security Reports
         uses: actions/upload-artifact@v4
         if: always()
