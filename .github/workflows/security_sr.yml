@@ -12,67 +12,90 @@ jobs:
 
     steps:
 
-      # Checkout
+      # 1. Checkout
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Python
+      # 2. Setup Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      # Dependências
+      # 3. Create reports folder
+      - name: Create reports folder
+        run: mkdir -p reports
+
+      # 4. Install dependencies
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # GITLEAKS
-      - name: Run Gitleaks
-        continue-on-error: true
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # SAST
-      - name: Install SAST tools
+      # 5. Install security tools
+      - name: Install security tools
         run: |
-          pip install bandit semgrep
+          pip install bandit semgrep pip-audit safety
 
+      # -------------------------
+      # GITLEAKS (Secrets Scan)
+      # -------------------------
+      - name: Install Gitleaks
+        run: |
+          GITLEAKS_VERSION=8.18.0
+          wget -q https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz
+          tar -xzf gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz
+          sudo mv gitleaks /usr/local/bin/
+
+      - name: Run Gitleaks
+        run: |
+          gitleaks detect \
+            --source . \
+            --report-format json \
+            --report-path reports/gitleaks-report.json \
+            --exit-code 0 || true
+
+      # -------------------------
+      # SAST
+      # -------------------------
       - name: Run Bandit
         run: |
           bandit -r . \
-          -f json \
-          -o bandit-report.json || true
+            -f json \
+            -o reports/bandit-report.json \
+            || true
 
       - name: Run Semgrep
         run: |
           semgrep \
-          --config=p/owasp-top-ten \
-          --json \
-          --output=semgrep-report.json \
-          . || true
+            --config=p/owasp-top-ten \
+            --json \
+            --output=reports/semgrep-report.json \
+            . \
+            || true
 
+      # -------------------------
       # SCA
-      - name: Install SCA tools
-        run: |
-          pip install pip-audit safety
-
+      # -------------------------
       - name: Run pip-audit
         run: |
           pip-audit \
-          -r requirements.txt \
-          --format=json \
-          --output=pip-audit-report.json || true
+            -r requirements.txt \
+            --format=json \
+            --output=reports/pip-audit-report.json \
+            || true
 
       - name: Run Safety
         run: |
-          safety scan \
-          --target requirements.txt \
-          --output json > safety-report.json || true
+          safety check \
+            -r requirements.txt \
+            --output json \
+            > reports/safety-report.json \
+            || true
 
-      # DAST
+      # -------------------------
+      # DAST (OWASP ZAP)
+      # -------------------------
       - name: Create .env file
         run: |
           echo "DB_HOST=${{ secrets.DB_HOST }}" >> docker/.env
@@ -95,44 +118,40 @@ jobs:
               echo "API is up!"
               exit 0
             fi
-
             sleep 5
           done
 
           echo "API failed to start"
-
-          docker logs flask_api > docker-web.log 2>&1 || true
-
+          docker logs flask_api > reports/docker-web.log 2>&1 || true
           exit 1
 
       - name: Save container logs
         if: always()
         run: |
-          docker logs flask_api > docker-web.log 2>&1 || true
+          docker logs flask_api > reports/docker-web.log 2>&1 || true
 
       - name: OWASP ZAP Baseline Scan
-        continue-on-error: true
         uses: zaproxy/action-baseline@v0.12.0
+        continue-on-error: true
         with:
           target: "http://localhost:5003"
           allow_issue_writing: false
           cmd_options: "-I"
           artifact_name: zap-report
 
-      # UPLOAD REPORTS
+      # -------------------------
+      # UPLOAD ALL REPORTS
+      # -------------------------
       - name: Upload Security Reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: security-reports
-          path: |
-            bandit-report.json
-            semgrep-report.json
-            pip-audit-report.json
-            safety-report.json
-            docker-web.log
+          path: reports/
 
+      # -------------------------
       # CLEANUP
+      # -------------------------
       - name: Stop containers
         if: always()
         run: |
