@@ -37,9 +37,7 @@ jobs:
         run: |
           pip install bandit semgrep pip-audit safety
 
-      # -------------------------
       # GITLEAKS (Secrets Scan)
-      # -------------------------
       - name: Install Gitleaks
         run: |
           GITLEAKS_VERSION=8.18.0
@@ -55,9 +53,7 @@ jobs:
             --report-path reports/gitleaks-report.json \
             --exit-code 0 || true
 
-      # -------------------------
       # SAST
-      # -------------------------
       - name: Run Bandit
         run: |
           bandit -r . \
@@ -74,9 +70,7 @@ jobs:
             . \
             || true
 
-      # -------------------------
       # SCA
-      # -------------------------
       - name: Run pip-audit
         run: |
           pip-audit \
@@ -93,9 +87,7 @@ jobs:
             > reports/safety-report.json \
             || true
 
-      # -------------------------
       # DAST (OWASP ZAP)
-      # -------------------------
       - name: Create .env file
         run: |
           echo "DB_HOST=${{ secrets.DB_HOST }}" >> docker/.env
@@ -139,9 +131,7 @@ jobs:
           cmd_options: "-I"
           artifact_name: zap-report
 
-      # -------------------------
       # UPLOAD ALL REPORTS
-      # -------------------------
       - name: Upload Security Reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -149,9 +139,7 @@ jobs:
           name: security-reports
           path: reports/
 
-      # -------------------------
       # CLEANUP
-      # -------------------------
       - name: Stop containers
         if: always()
         run: |
