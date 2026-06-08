@@ -3,39 +3,59 @@ import json
 from flask_jwt_extended import create_access_token, create_refresh_token
 from src.domain.user.entities import User
 from src.domain.user.value_objects import InvalidUserNameError, PasswordError
-from src.infrastructure.persistance.userDB import find_by_username, create_user, UserPersistanceError
+from src.infrastructure.persistance.userDB import find_by_username, create_user, get_user_by_username, UserPersistanceError
+from src.infrastructure.persistance.access_tokensDB import save_refresh_token,revoke_token,find_valid_token, RefreshTokenPersistenceError
+from datetime import datetime, timedelta, timezone
+from src.domain.user.value_objects import HashedPassword
 import traceback
 
 class AuthenticationError(Exception):
     pass
 
 class UserService:
-    def authenticate(self, email_str, password_raw) -> tuple[str, str]:
+    def authenticate(self, username_str, password_raw) -> tuple[str, str]:
         """
         Valida credencias de login
-        ARGS: email_str (str), password_raw(str)
+        ARGS: username_str (str), password_raw(str)
         returns: token de acesso e refresh token caso a validação seja bem sucedida
         """
-        #TODO Fazer Alteração quando lógica de BD for implementada
-        #TODO inseir tempo de duração de token
 
-        #!! Verificação manual a ser alterada
-        if email_str == 'admin' and password_raw == 'password':
-            a_token = create_access_token(identity=email_str)
-            r_token = create_refresh_token(identity=email_str)
-            return a_token, r_token
-        else:
-            raise AuthenticationError()
+        if not username_str or not password_raw:
+            raise AuthenticationError("Não foram recebidas credenciais")
+
+        user = get_user_by_username(username_str)
+        if user is None:
+            raise AuthenticationError("Username inválido")
+
+        if not HashedPassword.verify(user._password_hash, password_raw):
+            raise AuthenticationError("Credenciais inválidas")
+
+        a_token = create_access_token(identity=username_str)
+        r_token = create_refresh_token(identity=username_str)
+        try:
+            expires_at = datetime.now(timezone.utc) + timedelta(days=30) 
+            save_refresh_token(
+                user_id=str(user.id),
+                raw_token=r_token,
+                expires_at=expires_at,
+            )
+        except RefreshTokenPersistenceError as e:
+            print(f"[ERROR] Falha ao persistir refresh token para {username_str}: {e}")
+            raise Exception("Erro interno ao completar o login.")
+
+        return a_token, r_token
         
-    def refreshtoken(self, email_str) -> str:
+    def refresh_atoken(self, username_str:str, raw_refresh_token:str) -> str:
         """
-        Atualiza o token a JWT
-        ARGS: email_str(str)
+        Atualiza o access token a JWT
+        ARGS: username_str(str), raw_refresh_token(str)
         returns: token
         """
-
-        new_token = create_access_token(identity=email_str)
-        return new_token
+        token_data = find_valid_token(raw_refresh_token)
+        if not token_data:
+            raise AuthenticationError("Refresh token inválido ou revogado.")
+        new_atoken = create_access_token(identity=username_str)
+        return new_atoken
     
     def register_user(self, username_raw: str, password_raw: str):
         """
@@ -50,7 +70,6 @@ class UserService:
             # Usar propriedade pública se existir, caso contrário mantém o atributo
             username_val = getattr(new_user, 'username', new_user._username)
 
-            # TODO: Implementar registo de tokens
             # Verificação de duplicidade de username
             if find_by_username(username_val):
                 raise InvalidUserNameError("Este nome de utilizador já está ocupado.")

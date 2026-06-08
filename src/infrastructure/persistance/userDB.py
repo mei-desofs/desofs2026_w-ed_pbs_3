@@ -60,3 +60,51 @@ def find_by_username(username:str) -> bool:
 
     finally:
         session.close()
+
+def get_user(username:str, password_hash:str) -> User:
+    start_mappers()
+    session = SessionLocal()
+    try:
+        user = (
+            session.query(User)
+            .filter(User._username == username, User._password_hash == password_hash)
+            .first()
+        )
+        return user
+    except Exception as e:
+        print(f"Erro ao procurar utilizador: {e}")
+        return None
+
+    finally:
+        session.close()
+
+def get_user_ID_by_username(username:str) -> str:
+    start_mappers()
+    session = SessionLocal()
+    try:
+        user = (
+            session.query(User)
+            .filter(User._username == username)
+            .first()
+        )
+        return user.id if user else None
+    except Exception as e:
+        print(f"Erro ao procurar utilizador: {e}")
+        return None
+
+    finally:
+        session.close()
+
+def get_user_by_username(username: str) -> User | None:
+    start_mappers()
+    session = SessionLocal()
+
+    try:
+        return (
+            session.query(User)
+            .filter(User._username == username)
+            .first()
+        )
+
+    finally:
+        session.close()

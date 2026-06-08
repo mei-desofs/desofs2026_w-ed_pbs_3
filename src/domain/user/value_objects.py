@@ -48,7 +48,12 @@ class HashedPassword:
         
         #Cria hash com salt 
         hashed_val = generate_password_hash(plain_text, method='scrypt')
+    
         return cls(hashed_val)
+    
+    @classmethod
+    def matches(self, plain_text: str) -> bool:
+        return check_password_hash(self.value, plain_text)
             
     @staticmethod
     def verify(hashed_value: str, plain_text: str) -> bool:
