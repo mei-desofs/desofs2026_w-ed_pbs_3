@@ -27,15 +27,15 @@ class UserService:
         if user is None:
             raise AuthenticationError("Username inválido")
 
-        if not user._HashedPassword.matches(user._password_hash, password_raw):
+        if not user._password_vo.matches(password_raw):
             raise AuthenticationError("Credenciais inválidas")
 
         a_token = create_access_token(identity=username_str)
         r_token = create_refresh_token(identity=username_str)
 
         # Limpa o hash da senha e a senha em plain text para segurança
-        user._password_hash.set_passw_to0s()  
-        password_raw = "0"*len(password_raw)  
+        #user._password_hash.set_passw_to0s()  
+        #password_raw = "0"*len(password_raw)  
         try:
             expires_at = datetime.now(timezone.utc) + timedelta(days=30) 
             save_refresh_token(

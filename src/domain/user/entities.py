@@ -1,11 +1,18 @@
 import uuid
+
+from sqlalchemy.orm import reconstructor
 from .value_objects import UserName, HashedPassword
 
 class User:
-    def __init__(self, user_id: uuid.UUID, user_name: UserName, password: HashedPassword):
+    def __init__(self, user_id: str, user_name: UserName, password: HashedPassword):
         self.id = user_id
-        self._username = user_name
-        self._password_hash = password
+        # atributos que o ORM usa (strings)
+        self._username = user_name.value
+        self._password_hash = password.value
+
+        # Value Objects em memória
+        self._username_vo = user_name
+        self._password_vo = password
 
     @classmethod
     def create(cls, username_str: str, plain_password_str: str):
@@ -13,7 +20,12 @@ class User:
         username = UserName.validate_and_create(username_str)
         password_hash = HashedPassword.create_from_plain_text(plain_password_str)
         
-        return cls(user_id, username.value, password_hash.value)
+        return cls(user_id, username, password_hash)
+    
+    @reconstructor
+    def _reconstruct_from_db(self):
+        self._username_vo = UserName(self._username)
+        self._password_vo = HashedPassword(self._password_hash)
 
     @property
     def username(self) -> str:
