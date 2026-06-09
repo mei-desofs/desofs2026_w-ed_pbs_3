@@ -37,6 +37,10 @@ class HashedPassword:
     def __init__(self, hashed_value: str):
         self._value = hashed_value
 
+    def set_passw_to0s(self):
+        """Deve ser chamado para limpar o hash da password"""
+        self._value = "0"*len(self._value)
+
     @classmethod
     def create_from_plain_text(cls, plain_text: str):
         #Verifica Lenght
@@ -53,15 +57,11 @@ class HashedPassword:
     
     @classmethod
     def matches(self, plain_text: str) -> bool:
-        return check_password_hash(self.value, plain_text)
-            
-    @staticmethod
-    def verify(hashed_value: str, plain_text: str) -> bool:
         """Função que recebe hash e a senha em plain text
         e compara para aferirir a senha correta
         ARGS: hashed_vale(str), plain_text(str)
         returns: True se correto"""
-        return check_password_hash(hashed_value, plain_text)
+        return check_password_hash(self.value, plain_text)
 
     @property
     def value(self):
