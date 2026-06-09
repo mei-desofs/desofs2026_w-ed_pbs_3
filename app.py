@@ -24,6 +24,10 @@ app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(minutes=15)
 app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(days=30)
 # verificação de nbf
 app.config["JWT_DECODE_LEEWAY"] = 0
+# config de aud
+app.config["JWT_ENCODE_AUDIENCE"] = os.getenv("JWT_AUD_KEY")      
+app.config["JWT_DECODE_AUDIENCE"] = os.getenv("JWT_AUD_KEY")    
+
 app.config["JWT_TOKEN_LOCATION"] = ["cookies"]
 app.config["JWT_COOKIE_CSRF_PROTECT"] = False
 app.config["JWT_COOKIE_HTTPONLY"] = True
