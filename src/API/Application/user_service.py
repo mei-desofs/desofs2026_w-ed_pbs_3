@@ -92,7 +92,7 @@ class UserService:
             return new_user
 
         except (InvalidUserNameError, PasswordError) as e:
-        # Relança os erros de domínio para que o Controller decida o status HTTP
+        # Relança os erros de domínio para que o Controller
             raise e
         
         except Exception as e:
