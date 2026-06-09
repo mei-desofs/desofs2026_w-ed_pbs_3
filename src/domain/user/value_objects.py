@@ -55,7 +55,6 @@ class HashedPassword:
     
         return cls(hashed_val)
     
-    @classmethod
     def matches(self, plain_text: str) -> bool:
         """Função que recebe hash e a senha em plain text
         e compara para aferirir a senha correta

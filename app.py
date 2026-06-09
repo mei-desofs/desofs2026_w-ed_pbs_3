@@ -18,8 +18,12 @@ mapper_registry.metadata.create_all(engine)
 
 # inicialização JWT
 app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
+#Allowlist the algoritmos
+app.config["JWT_DECODE_ALGORITHMS"] = ["HS256"]  
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(minutes=15)
 app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(days=30)
+# verificação de nbf
+app.config["JWT_DECODE_LEEWAY"] = 0
 app.config["JWT_TOKEN_LOCATION"] = ["cookies"]
 app.config["JWT_COOKIE_CSRF_PROTECT"] = False
 app.config["JWT_COOKIE_HTTPONLY"] = True
