@@ -1,0 +1,49 @@
+from sqlalchemy import text
+from connection import SessionLocal
+
+class WorkspaceRepository:
+
+    def create(self, id, name, folder_path, created_by):
+        db = SessionLocal()
+        try:
+            db.execute(text("""
+                INSERT INTO workspaces (id, name, folder_path, created_by)
+                VALUES (:id, :name, :folder_path, :created_by)
+            """), {
+                "id": id,
+                "name": name,
+                "folder_path": folder_path,
+                "created_by": created_by
+            })
+
+            db.commit()
+            return id
+        finally:
+            db.close()
+
+    # 🔥 ESTE MÉTODO ESTAVA EM FALTA
+    def get_by_user(self, user_id):
+        db = SessionLocal()
+        try:
+            result = db.execute(text("""
+                SELECT id, name, created_at
+                FROM workspaces
+                WHERE created_by = :user_id
+                ORDER BY created_at DESC
+            """), {
+                "user_id": user_id
+            })
+
+            rows = result.fetchall()
+
+            return [
+                {
+                    "id": r[0],
+                    "name": r[1],
+                    "created_at": r[2].isoformat() if r[2] else None
+                }
+                for r in rows
+            ]
+
+        finally:
+            db.close()

@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from connection import engine
 from connection import engine,SessionLocal
 import os
+from src.API.workspace_routes import workspace_bp
 
 app = Flask(__name__)
 
@@ -41,6 +42,7 @@ jwt = JWTManager(app)
 
 # definição de blueprints
 app.register_blueprint(user_bp)
+app.register_blueprint(workspace_bp)
 
 if __name__ == "__main__":
     app.run(debug=True, host = "0.0.0.0", port = "5003")

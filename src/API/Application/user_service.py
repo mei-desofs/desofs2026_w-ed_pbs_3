@@ -32,8 +32,10 @@ class UserService:
         
         user.password_vo.set_passw_to0s() # Limpa o hash da senha
 
-        a_token = create_access_token(identity=username_str)
-        r_token = create_refresh_token(identity=username_str)
+        #a_token = create_access_token(identity=username_str)
+        #r_token = create_refresh_token(identity=username_str)
+        a_token = create_access_token(identity=str(user.id))
+        r_token = create_refresh_token(identity=str(user.id))
 
         try:
             expires_at = datetime.now(timezone.utc) + timedelta(days=30) 
