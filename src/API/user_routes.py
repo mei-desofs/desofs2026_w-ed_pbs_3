@@ -58,18 +58,17 @@ def regist():
         return jsonify({"error": "Ocorreu um erro interno no servidor. Por favor, tente mais tarde."}), 500
 
 
-
-#É necessário criar função JS que chame este endpoint para atualizar o token
 @user_bp.route('/refresh', methods=['POST'])
 @jwt_required(refresh=True)
 def refresh():
 
     identity = get_jwt_identity()
+    raw_refresh_token = request.cookies.get("refresh_token_cookie")
 
-    new_token = user_service.refreshtoken(identity)
+    new_atoken = user_service.refresh_atoken(identity, raw_refresh_token)
 
     resp = jsonify({"msg": "token refreshed"})
-    set_access_cookies(resp, new_token, max_age=900)
+    set_access_cookies(resp, new_atoken, max_age=900)
 
     return resp
     
