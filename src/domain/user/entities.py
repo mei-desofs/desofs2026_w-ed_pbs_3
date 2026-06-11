@@ -29,11 +29,19 @@ class User:
 
     @property
     def username(self) -> str:
-        return self._username.value
+        return self._username
 
     @property
     def hash_of_password(self) -> str:
-        return self._password_hash.value
+        return self._password_hash  
+    
+    @property
+    def password_vo(self) -> HashedPassword:
+        return self._password_vo
+
+    @property
+    def username_vo(self) -> UserName:
+        return self._username_vo
 
     def __repr__(self):
         return f"<User {self.id} | {self.username}>"
