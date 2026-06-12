@@ -29,9 +29,40 @@
 
 <ul id="workspaceList" class="list-group mt-2"></ul>
 
+<hr>
+
+<h3>Workspace Atual</h3>
+
+<p id="currentWorkspace">
+    Nenhum workspace selecionado
+</p>
+
+<input
+    id="docTitle"
+    class="form-control mt-2"
+    placeholder="Título do documento">
+
+<textarea
+    id="docContent"
+    class="form-control mt-2"
+    rows="8"
+    placeholder="Conteúdo markdown">
+</textarea>
+
+<button
+    class="btn btn-success mt-2"
+    onclick="createDocument()">
+    Criar Documento
+</button>
+
+<h4 class="mt-4">Documentos</h4>
+
+<ul id="documentList" class="list-group"></ul>
+
 </body>
 
 <script>
+    let selectedWorkspaceId = null;
 
 apiRequest("{{ url_for('users.get_current_user') }}")
     .then(res => res.json())
@@ -94,6 +125,12 @@ function loadWorkspaces() {
                     <small class="d-block text-muted">${ws.created_at}</small>
 
                     <button
+                        class="btn btn-primary btn-sm mt-2"
+                        onclick="openWorkspace('${ws.id}','${ws.name}')">
+                        Abrir
+                    </button>
+
+                    <button
                         class="btn btn-danger btn-sm mt-2"
                         onclick="deleteWorkspace('${ws.id}')">
                         Eliminar
@@ -116,6 +153,82 @@ function logout() {
         window.location.href = data.redirect;
 
     });
+}
+
+function openWorkspace(workspaceId, workspaceName) {
+
+    selectedWorkspaceId = workspaceId;
+
+    document.getElementById("currentWorkspace").innerText =
+        workspaceName;
+
+    loadDocuments();
+}
+
+function createDocument() {
+
+    if (!selectedWorkspaceId) {
+        alert("Selecione um workspace");
+        return;
+    }
+
+    const title = document.getElementById("docTitle").value;
+    const content = document.getElementById("docContent").value;
+
+    apiRequest("/documents", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            workspace_id: selectedWorkspaceId,
+            title: title,
+            content: content
+        })
+    })
+    .then(res => res.json())
+    .then(() => {
+
+        document.getElementById("docTitle").value = "";
+        document.getElementById("docContent").value = "";
+
+        loadDocuments();
+    });
+}
+
+function loadDocuments() {
+
+    if (!selectedWorkspaceId) {
+        return;
+    }
+
+    apiRequest(`/documents/${selectedWorkspaceId}`)
+        .then(res => res.json())
+        .then(data => {
+
+            const list =
+                document.getElementById("documentList");
+
+            list.innerHTML = "";
+
+            data.documents.forEach(doc => {
+
+                const li =
+                    document.createElement("li");
+
+                li.className =
+                    "list-group-item";
+
+                li.innerHTML = `
+                    <b>${doc.title}</b>
+                    <small class="d-block text-muted">
+                        ${doc.created_at}
+                    </small>
+                `;
+
+                list.appendChild(li);
+            });
+        });
 }
 
 document.addEventListener("DOMContentLoaded", loadWorkspaces);

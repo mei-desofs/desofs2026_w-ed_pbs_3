@@ -93,3 +93,38 @@ class WorkspaceRepository:
 
         finally:
             db.close()
+
+    def get_by_id(self, workspace_id):
+
+        db = SessionLocal()
+
+        try:
+
+            result = db.execute(text("""
+                SELECT
+                    id,
+                    name,
+                    folder_path,
+                    created_by,
+                    created_at
+                FROM workspaces
+                WHERE id = :workspace_id
+            """), {
+                "workspace_id": workspace_id
+            })
+
+            row = result.fetchone()
+
+            if not row:
+                return None
+
+            return {
+                "id": row[0],
+                "name": row[1],
+                "folder_path": row[2],
+                "created_by": row[3],
+                "created_at": row[4]
+            }
+
+        finally:
+            db.close()

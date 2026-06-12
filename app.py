@@ -9,6 +9,7 @@ from connection import engine
 from connection import engine,SessionLocal
 import os
 from src.API.workspace_routes import workspace_bp
+from src.API.doc_routes import doc_bp
 import ssl
 import traceback
 import logging
@@ -110,6 +111,7 @@ def handle_http_error(e):
 # definição de blueprints
 app.register_blueprint(user_bp)
 app.register_blueprint(workspace_bp)
+app.register_blueprint(doc_bp)
 
 if __name__ == "__main__":
     app.run(debug=True, host = "0.0.0.0", port = "5003", ssl_context=create_ssl_context())
