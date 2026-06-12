@@ -8,6 +8,7 @@ from connection import engine
 from connection import engine,SessionLocal
 import os
 from src.API.workspace_routes import workspace_bp
+import ssl
 
 app = Flask(__name__)
 
@@ -45,9 +46,24 @@ jwt = JWTManager(app)
 def unauthorized_callback(reason):
     return redirect(url_for("users.user_login"))
 
+
+def create_ssl_context():
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    
+    # TLS 1.2 como mínimo, 1.3 como preferido
+    ctx.minimum_version = ssl.TLSVersion.TLSv1_2
+    ctx.maximum_version = ssl.TLSVersion.TLSv1_3
+    
+    ctx.load_cert_chain(
+        certfile="certs/cert.pem",
+        keyfile="certs/key.pem"
+    )
+    return ctx
+
+
 # definição de blueprints
 app.register_blueprint(user_bp)
 app.register_blueprint(workspace_bp)
 
 if __name__ == "__main__":
-    app.run(debug=True, host = "0.0.0.0", port = "5003", ssl_context='adhoc')
+    app.run(debug=True, host = "0.0.0.0", port = "5003", ssl_context=create_ssl_context())
