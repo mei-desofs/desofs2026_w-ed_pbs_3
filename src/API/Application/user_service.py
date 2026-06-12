@@ -53,7 +53,8 @@ class UserService:
             )
         except RefreshTokenPersistenceError as e:
             print(f"[ERROR] Falha ao persistir refresh token para {username_str}: {e}")
-            raise Exception("Erro interno ao completar o login.")
+            
+            raise AuthenticationError("Serviço temporariamente indisponível. Tente mais tarde.")
 
         return a_token, r_token
         
@@ -91,7 +92,7 @@ class UserService:
                 create_user(new_user)
             except UserPersistanceError as e:
                 print(f"[ERROR] Falha na base de dados ao registar {username_val}: {e}")
-                raise Exception("Não foi possível persistir os dados do utilizador de momento.")
+                raise AuthenticationError("Serviço temporariamente indisponível. Tente mais tarde.")
             
             print(f"[LOG] Utilizador {username_val} registado com sucesso.")
 

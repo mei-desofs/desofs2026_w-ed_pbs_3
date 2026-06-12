@@ -56,7 +56,7 @@ def find_by_username(username:str) -> bool:
         else: return False
     except Exception as e:
         print(f"Erro ao procurar utilizador: {e}")
-        return None
+        raise UserPersistanceError(f"Erro ao verificar username: {e}")
 
     finally:
         session.close()
@@ -73,7 +73,7 @@ def get_user(username:str, password_hash:str) -> User:
         return user
     except Exception as e:
         print(f"Erro ao procurar utilizador: {e}")
-        return None
+        raise UserPersistanceError(f"Erro ao procurar utilizador: {e}")
 
     finally:
         session.close()
