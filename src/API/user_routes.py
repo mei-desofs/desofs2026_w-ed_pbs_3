@@ -1,5 +1,5 @@
 from flask import Flask, jsonify, request, Blueprint, render_template, redirect, url_for
-from flask_jwt_extended import unset_access_cookies, jwt_required, get_jwt_identity, set_access_cookies, set_refresh_cookies
+from flask_jwt_extended import unset_access_cookies, jwt_required, get_jwt_identity, set_access_cookies, set_refresh_cookies, unset_refresh_cookies
 from src.API.Application.user_service import UserService, AuthenticationError
 from src.domain.user.value_objects import InvalidUserNameError, LengthError, RockError, PasswordError
 from src.infrastructure.persistance.userDB import get_user_by_id
@@ -74,6 +74,7 @@ def refresh():
     return resp
     
 @user_bp.route('/mainpage', methods = ['GET'])
+@jwt_required()
 def mainpage():
     if request.method == 'GET':
         return render_template('/mainpage.html')
@@ -124,9 +125,18 @@ def register():
         return jsonify({"error": "Erro interno no servidor"}), 500
 
 #TODO Rever logout
-@user_bp.route('/logout',methods = ['POST'])
+@user_bp.route('/logout', methods=['POST'])
 @jwt_required()
 def logout():
-    resp = jsonify({"msg": "Logout Successful"})
-    unset_access_cookies
+    """
+    Termina a sessão do utilizador autenticado.
+    """
+
+    resp = jsonify({
+        "redirect": url_for("users.user_login")
+    })
+
+    unset_access_cookies(resp)
+    unset_refresh_cookies(resp)
+
     return resp, 200

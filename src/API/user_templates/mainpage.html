@@ -11,6 +11,12 @@
 
 <h1>Bem vindo, <span id="userEmail"></span></h1>
 
+<button
+    class="btn btn-outline-danger float-end"
+    onclick="logout()">
+    Terminar Sessão
+</button>
+
 <div class="mt-3">
     <input id="workspaceNameInput" class="form-control" placeholder="Nome do workspace">
 </div>
@@ -97,6 +103,19 @@ function loadWorkspaces() {
                 list.appendChild(li);
             });
         });
+}
+
+function logout() {
+
+    apiRequest("/logout", {
+        method: "POST"
+    })
+    .then(res => res.json())
+    .then(data => {
+
+        window.location.href = data.redirect;
+
+    });
 }
 
 document.addEventListener("DOMContentLoaded", loadWorkspaces);
