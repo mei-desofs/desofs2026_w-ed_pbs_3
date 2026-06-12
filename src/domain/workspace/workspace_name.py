@@ -1,11 +1,10 @@
 import re
 
-
 class InvalidWorkspaceNameError(Exception):
     pass
 
 
-WORKSPACE_NAME_REGEX = re.compile(r"^[a-zA-Z0-9_-]{1,50}$")
+WORKSPACE_NAME_REGEX = re.compile(r"^[a-zA-Z0-9_-]{1,32}$")
 
 
 def validate_workspace_name(name: str) -> str:
@@ -16,7 +15,7 @@ def validate_workspace_name(name: str) -> str:
 
     if not WORKSPACE_NAME_REGEX.fullmatch(name):
         raise InvalidWorkspaceNameError(
-            "Invalid workspace name. Only letters, numbers, '_' and '-' allowed (max 50 chars)."
+            "Invalid name: max 32 chars, only letters, numbers, '_' and '-' allowed."
         )
 
     return name

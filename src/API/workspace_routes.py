@@ -1,10 +1,11 @@
 import uuid
 import requests
+import time
+
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from src.infrastructure.persistance.workspace_repository import WorkspaceRepository
-
 from src.domain.workspace.workspace_name import (
     validate_workspace_name,
     InvalidWorkspaceNameError
@@ -15,12 +16,36 @@ repo = WorkspaceRepository()
 
 WORKSPACE_URL = "http://workspace:8000/workspace"
 
+# anti-spam
+workspace_creation_tracker = {}
+
 
 @workspace_bp.route("/workspaces/create", methods=["POST"])
 @jwt_required()
 def create_workspace():
 
     user_id = get_jwt_identity()
+
+    # RATE LIMIT (ANTI-SPAM)
+    now = time.time()
+    last = workspace_creation_tracker.get(user_id)
+
+    if last and now - last < 3:
+        return jsonify({
+            "error": "Too many requests. Please wait a few seconds."
+        }), 429
+
+    workspace_creation_tracker[user_id] = now
+
+    # QUOTA CHECK
+    current_count = repo.count_by_user(user_id)
+
+    if current_count >= 10:
+        return jsonify({
+            "error": "Workspace limit reached (max 10 per user)"
+        }), 403
+
+    # INPUT
     data = request.get_json()
 
     name = data.get("name")
@@ -28,16 +53,13 @@ def create_workspace():
     if not name:
         return jsonify({"error": "Workspace name required"}), 400
 
-    name = data.get("name")
-
-    if not name:
-        return jsonify({"error": "Workspace name required"}), 400
-
+    # VALIDATION (DOMAIN)
     try:
         name = validate_workspace_name(name)
     except InvalidWorkspaceNameError as e:
         return jsonify({"error": str(e)}), 400
 
+    # WORKSPACE CREATION
     workspace_id = str(uuid.uuid4())
 
     access_cookie = request.cookies.get("access_token_cookie")
@@ -58,9 +80,6 @@ def create_workspace():
         }
     )
 
-    print("STATUS:", r.status_code)
-    print("BODY:", r.text)
-
     if r.status_code != 200:
         return jsonify({
             "error": "Workspace service error"
@@ -68,6 +87,7 @@ def create_workspace():
 
     path = r.json()["path"]
 
+    # DB PERSISTENCE
     repo.create(
         id=workspace_id,
         name=name,
@@ -79,6 +99,7 @@ def create_workspace():
         "id": workspace_id,
         "name": name
     })
+
 
 @workspace_bp.route("/workspaces", methods=["GET"])
 @jwt_required()

@@ -21,7 +21,6 @@ class WorkspaceRepository:
         finally:
             db.close()
 
-    # 🔥 ESTE MÉTODO ESTAVA EM FALTA
     def get_by_user(self, user_id):
         db = SessionLocal()
         try:
@@ -45,5 +44,18 @@ class WorkspaceRepository:
                 for r in rows
             ]
 
+        finally:
+            db.close()
+
+    def count_by_user(self, user_id):
+        db = SessionLocal()
+        try:
+            result = db.execute(text("""
+                SELECT COUNT(*) as total
+                FROM workspaces
+                WHERE created_by = :user_id
+            """), {"user_id": user_id})
+
+            return result.fetchone()[0]
         finally:
             db.close()
