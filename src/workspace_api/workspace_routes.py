@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from pathlib import Path
 import os
+import uuid
 
 from src.domain.workspace.workspace_name import validate_workspace_name
 
@@ -10,37 +11,40 @@ bp = Blueprint("workspace", __name__)
 # BASE FIXA DO SISTEMA
 BASE_DIR = Path("/workspaces").resolve()
 
+SERVICE_TOKEN = os.getenv("WORKSPACE_SERVICE_TOKEN")
 
 @bp.route("/create", methods=["POST"])
-@jwt_required()
 def create_workspace():
+
+    # SERVICE AUTH CHECK
+    if not verify_internal_request():
+        return jsonify({"error": "Unauthorized service request"}), 401
 
     data = request.json
 
-    user_id = str(get_jwt_identity())
-    workspace_id = data["workspace_id"]
+    user_id = str(data["user_id"])
+    name = data.get("name")
 
-    name = data.get("name", workspace_id)
+    # validações
+    name = name.strip()
 
-    # validação de domínio
-    try:
-        name = validate_workspace_name(name)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
+    if len(name) > 32:
+        return jsonify({"error": "Name too long"}), 400
 
-    # user vem do JWT (trust boundary)
-    safe_user = user_id
+    # PATH TRAVERSAL
+    path = (BASE_DIR / user_id / name).resolve()
 
-    # PATH BUILD SEGURO
-    path = (BASE_DIR / safe_user / name).resolve()
+    if not str(path).startswith(str(BASE_DIR.resolve())):
+        return jsonify({"error": "Invalid path"}), 400
 
-    # proteção contra path traversal
-    if not str(path).startswith(str(BASE_DIR)):
-        return jsonify({"error": "Invalid path detected"}), 400
-
-    # cria diretório
     os.makedirs(path, exist_ok=True)
 
     return jsonify({
         "path": str(path)
     })
+
+def verify_internal_request():
+    token = request.headers.get("X-Service-Token")
+    if not token or token != SERVICE_TOKEN:
+        return False
+    return True

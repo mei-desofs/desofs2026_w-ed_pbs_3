@@ -6,10 +6,8 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from src.infrastructure.persistance.workspace_repository import WorkspaceRepository
-from src.domain.workspace.workspace_name import (
-    validate_workspace_name,
-    InvalidWorkspaceNameError
-)
+from src.domain.workspace.workspace_name import validate_workspace_name, InvalidWorkspaceNameError
+import os
 
 workspace_bp = Blueprint("workspace", __name__)
 repo = WorkspaceRepository()
@@ -18,6 +16,8 @@ WORKSPACE_URL = "http://workspace:8000/workspace"
 
 # anti-spam
 workspace_creation_tracker = {}
+
+SERVICE_TOKEN = os.getenv("WORKSPACE_SERVICE_TOKEN")
 
 
 @workspace_bp.route("/workspaces/create", methods=["POST"])
@@ -72,11 +72,12 @@ def create_workspace():
     r = requests.post(
         f"{WORKSPACE_URL}/create",
         json={
+            "user_id": user_id,
             "workspace_id": workspace_id,
             "name": name
         },
-        cookies={
-            "access_token_cookie": access_cookie
+        headers={
+            "X-Service-Token": SERVICE_TOKEN
         }
     )
 

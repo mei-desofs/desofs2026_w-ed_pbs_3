@@ -53,6 +53,7 @@ services:
 
     environment:
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      WORKSPACE_SERVICE_TOKEN: ${WORKSPACE_SERVICE_TOKEN}
 
     # persistência de ficheiros dos utilizadores
     volumes:
