@@ -31,11 +31,31 @@ def create_workspace():
 
     workspace_id = str(uuid.uuid4())
 
-    r = requests.post(f"{WORKSPACE_URL}/create", json={
-        "user_id": user_id,
-        "workspace_id": workspace_id,
-        "name": name
-    })
+    access_cookie = request.cookies.get("access_token_cookie")
+
+    if not access_cookie:
+        return jsonify({
+            "error": "Authentication cookie missing"
+        }), 401
+
+    r = requests.post(
+        f"{WORKSPACE_URL}/create",
+        json={
+            "workspace_id": workspace_id,
+            "name": name
+        },
+        cookies={
+            "access_token_cookie": access_cookie
+        }
+    )
+
+    print("STATUS:", r.status_code)
+    print("BODY:", r.text)
+
+    if r.status_code != 200:
+        return jsonify({
+            "error": "Workspace service error"
+        }), 500
 
     path = r.json()["path"]
 

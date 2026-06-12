@@ -1,17 +1,19 @@
 from flask import Blueprint, request, jsonify
-from src.workspace_api.service import WorkspaceService
+from flask_jwt_extended import jwt_required, get_jwt_identity
 import os
 
 bp = Blueprint("workspace", __name__)
-service = WorkspaceService()
 
 
 @bp.route("/create", methods=["POST"])
+@jwt_required()
 def create_workspace():
 
     data = request.json
 
-    user_id = str(data["user_id"])
+    # user_id vem do JWT
+    user_id = str(get_jwt_identity())
+
     workspace_id = data["workspace_id"]
     name = data.get("name", workspace_id)
 
@@ -30,4 +32,6 @@ def create_workspace():
 
     os.makedirs(path, exist_ok=True)
 
-    return jsonify({"path": path})
+    return jsonify({
+        "path": path
+    })

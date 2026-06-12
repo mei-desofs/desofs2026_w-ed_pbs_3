@@ -51,6 +51,9 @@ services:
     depends_on:
       - db
 
+    environment:
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+
     # persistência de ficheiros dos utilizadores
     volumes:
       - workspace_data:/workspaces
