@@ -36,8 +36,8 @@ app.config["JWT_COOKIE_HTTPONLY"] = True
 app.config["JWT_COOKIE_SAMESITE"] = "Strict"
 app.config["JWT_REFRESH_COOKIE_PATH"] = "/refresh"
 app.config["JWT_ACCESS_COOKIE_PATH"] = "/"
-# !!!!! Definir TRUE quando for usado HTTPS
-app.config["JWT_COOKIE_SECURE"] = False
+app.config["JWT_COOKIE_SECURE"] = True
+app.config["SESSION_COOKIE_SECURE"] = True
 
 jwt = JWTManager(app)
 # quando tenta acessar recurso protegido sem token, redireciona para login
@@ -50,4 +50,4 @@ app.register_blueprint(user_bp)
 app.register_blueprint(workspace_bp)
 
 if __name__ == "__main__":
-    app.run(debug=True, host = "0.0.0.0", port = "5003")
+    app.run(debug=True, host = "0.0.0.0", port = "5003", ssl_context='adhoc')
