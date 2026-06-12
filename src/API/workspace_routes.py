@@ -5,6 +5,11 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from src.infrastructure.persistance.workspace_repository import WorkspaceRepository
 
+from src.domain.workspace.workspace_name import (
+    validate_workspace_name,
+    InvalidWorkspaceNameError
+)
+
 workspace_bp = Blueprint("workspace", __name__)
 repo = WorkspaceRepository()
 
@@ -23,11 +28,15 @@ def create_workspace():
     if not name:
         return jsonify({"error": "Workspace name required"}), 400
 
-    # validação básica
-    name = name.strip()
+    name = data.get("name")
 
-    if len(name) < 1 or len(name) > 50:
-        return jsonify({"error": "Invalid workspace name"}), 400
+    if not name:
+        return jsonify({"error": "Workspace name required"}), 400
+
+    try:
+        name = validate_workspace_name(name)
+    except InvalidWorkspaceNameError as e:
+        return jsonify({"error": str(e)}), 400
 
     workspace_id = str(uuid.uuid4())
 
