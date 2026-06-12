@@ -2,6 +2,7 @@ from flask import Flask, jsonify, request, Blueprint, render_template, redirect,
 from flask_jwt_extended import unset_access_cookies, jwt_required, get_jwt_identity, set_access_cookies, set_refresh_cookies
 from src.API.Application.user_service import UserService, AuthenticationError
 from src.domain.user.value_objects import InvalidUserNameError, LengthError, RockError, PasswordError
+from src.infrastructure.persistance.userDB import get_user_by_id
 import traceback
 user_service = UserService()
 
@@ -81,7 +82,25 @@ def mainpage():
 @user_bp.route('/get_current_user')
 @jwt_required(optional=True)
 def get_current_user():
-    return jsonify({"logged_as": get_jwt_identity()}), 200
+    """
+    Obtém informação do utilizador autenticado.
+
+    Returns:
+        Username do utilizador autenticado.
+    """
+
+    user_id = get_jwt_identity()
+
+    user = get_user_by_id(user_id)
+
+    if user is None:
+        return jsonify({
+            "error": "Utilizador não encontrado"
+        }), 404
+
+    return jsonify({
+        "logged_as": user._username
+    }), 200
 
 @user_bp.route('/register', methods=['POST', 'GET'])
 def register():

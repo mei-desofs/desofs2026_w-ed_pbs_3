@@ -55,6 +55,21 @@ function createWorkspace() {
     });
 }
 
+function deleteWorkspace(workspaceId) {
+
+    if (!confirm("Pretende eliminar este workspace?")) {
+        return;
+    }
+
+    apiRequest(`/workspaces/${workspaceId}`, {
+        method: "DELETE"
+    })
+    .then(res => res.json())
+    .then(() => {
+        loadWorkspaces();
+    });
+}
+
 function loadWorkspaces() {
     apiRequest("/workspaces")
         .then(res => res.json())
@@ -71,6 +86,12 @@ function loadWorkspaces() {
                 li.innerHTML = `
                     <b>${ws.name}</b>
                     <small class="d-block text-muted">${ws.created_at}</small>
+
+                    <button
+                        class="btn btn-danger btn-sm mt-2"
+                        onclick="deleteWorkspace('${ws.id}')">
+                        Eliminar
+                    </button>
                 `;
 
                 list.appendChild(li);

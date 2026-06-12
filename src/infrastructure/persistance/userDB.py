@@ -108,3 +108,28 @@ def get_user_by_username(username: str) -> User | None:
 
     finally:
         session.close()
+
+
+def get_user_by_id(user_id: str) -> User | None:
+    """
+    Obtém um utilizador através do seu identificador.
+
+    Arguments:
+        user_id: Identificador único do utilizador.
+
+    Returns:
+        Instância User caso exista, None caso contrário.
+    """
+
+    start_mappers()
+    session = SessionLocal()
+
+    try:
+        return (
+            session.query(User)
+            .filter(User.id == user_id)
+            .first()
+        )
+
+    finally:
+        session.close()

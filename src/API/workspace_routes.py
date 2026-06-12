@@ -116,3 +116,27 @@ def list_workspaces():
     return jsonify({
         "workspaces": workspaces
     })
+
+@workspace_bp.route("/workspaces/<workspace_id>", methods=["DELETE"])
+@jwt_required()
+def delete_workspace(workspace_id: str):
+    """
+    Remove um workspace do utilizador autenticado.
+
+    Arguments:
+        workspace_id: Identificador do workspace.
+
+    Returns:
+        Mensagem de sucesso ou erro.
+    """
+
+    deleted = repo.delete(workspace_id)
+
+    if not deleted:
+        return jsonify({
+            "error": "Workspace não encontrado"
+        }), 404
+
+    return jsonify({
+        "message": "Workspace eliminado com sucesso"
+    }), 200

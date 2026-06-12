@@ -47,6 +47,7 @@ class WorkspaceRepository:
         finally:
             db.close()
 
+
     def count_by_user(self, user_id):
         db = SessionLocal()
         try:
@@ -57,5 +58,36 @@ class WorkspaceRepository:
             """), {"user_id": user_id})
 
             return result.fetchone()[0]
+
+    
+    def delete(self, workspace_id: str) -> bool:
+        """
+        Remove um workspace da base de dados.
+
+        Arguments:
+            workspace_id: Identificador do workspace.
+
+        Returns:
+            True se o workspace foi removido, False caso contrário.
+        """
+
+        db = SessionLocal()
+
+        try:
+
+            result = db.execute(
+                text("""
+                    DELETE FROM workspaces
+                    WHERE id = :workspace_id
+                """),
+                {
+                    "workspace_id": workspace_id
+                }
+            )
+
+            db.commit()
+
+            return result.rowcount > 0
+
         finally:
             db.close()
