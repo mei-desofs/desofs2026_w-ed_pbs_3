@@ -4,7 +4,7 @@ from flask_jwt_extended import create_access_token, create_refresh_token
 from src.domain.user.entities import User
 from src.domain.user.value_objects import InvalidUserNameError, PasswordError
 from src.infrastructure.persistance.userDB import find_by_username, create_user, get_user_by_username, UserPersistanceError
-from src.infrastructure.persistance.access_tokensDB import save_refresh_token,revoke_token,find_valid_token, RefreshTokenPersistenceError
+from src.infrastructure.persistance.access_tokensDB import revoke_all_user_tokens, save_refresh_token,revoke_token,find_valid_token, RefreshTokenPersistenceError
 from datetime import datetime, timedelta, timezone
 from src.domain.user.value_objects import HashedPassword
 import traceback
@@ -26,6 +26,13 @@ class UserService:
         user = get_user_by_username(username_str)
         if user is None:
             raise AuthenticationError("Username inválido")
+        
+        # Termina sessões anteriores do utilizador
+        
+        try:
+            revoke_all_user_tokens(str(user.id))
+        except RefreshTokenPersistenceError as e:
+            print(f"[WARN] Não foi possível revogar sessões anteriores: {e}")
 
         if not user._password_vo.matches(password_raw):
             raise AuthenticationError("Credenciais inválidas")
@@ -46,7 +53,8 @@ class UserService:
             )
         except RefreshTokenPersistenceError as e:
             print(f"[ERROR] Falha ao persistir refresh token para {username_str}: {e}")
-            raise Exception("Erro interno ao completar o login.")
+            
+            raise AuthenticationError("Serviço temporariamente indisponível. Tente mais tarde.")
 
         return a_token, r_token
         
@@ -84,7 +92,7 @@ class UserService:
                 create_user(new_user)
             except UserPersistanceError as e:
                 print(f"[ERROR] Falha na base de dados ao registar {username_val}: {e}")
-                raise Exception("Não foi possível persistir os dados do utilizador de momento.")
+                raise AuthenticationError("Serviço temporariamente indisponível. Tente mais tarde.")
             
             print(f"[LOG] Utilizador {username_val} registado com sucesso.")
 

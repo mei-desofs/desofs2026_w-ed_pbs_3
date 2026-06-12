@@ -9,6 +9,18 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
+
+# Cria certificados self-signed
+RUN mkdir -p /app/certs && \
+    openssl req -x509 -newkey rsa:4096 \
+    -keyout /app/certs/key.pem \
+    -out /app/certs/cert.pem \
+    -days 365 -nodes \
+    -subj "/CN=localhost"
+
+#logs
+RUN mkdir -p /app/logs
+
 # copiar dependências primeiro (cache Docker)
 COPY requirements.txt .
 

@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, blueprints
 from flask_jwt_extended import JWTManager
 from flask import redirect, url_for
+from werkzeug.exceptions import HTTPException
 from src.API.user_routes import user_bp
 from datetime import timedelta
 from dotenv import load_dotenv
@@ -8,6 +9,9 @@ from connection import engine
 from connection import engine,SessionLocal
 import os
 from src.API.workspace_routes import workspace_bp
+import ssl
+import traceback
+import logging
 
 app = Flask(__name__)
 
@@ -36,8 +40,8 @@ app.config["JWT_COOKIE_HTTPONLY"] = True
 app.config["JWT_COOKIE_SAMESITE"] = "Strict"
 app.config["JWT_REFRESH_COOKIE_PATH"] = "/refresh"
 app.config["JWT_ACCESS_COOKIE_PATH"] = "/"
-# !!!!! Definir TRUE quando for usado HTTPS
-app.config["JWT_COOKIE_SECURE"] = False
+app.config["JWT_COOKIE_SECURE"] = True
+app.config["SESSION_COOKIE_SECURE"] = True
 
 jwt = JWTManager(app)
 # quando tenta acessar recurso protegido sem token, redireciona para login
@@ -45,9 +49,67 @@ jwt = JWTManager(app)
 def unauthorized_callback(reason):
     return redirect(url_for("users.user_login"))
 
+
+def create_ssl_context():
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    
+    # TLS 1.2 como mínimo, 1.3 como preferido
+    ctx.minimum_version = ssl.TLSVersion.TLSv1_2
+    ctx.maximum_version = ssl.TLSVersion.TLSv1_3
+
+    ctx.set_ciphers(
+        "ECDHE-ECDSA-AES256-GCM-SHA384:"
+        "ECDHE-RSA-AES256-GCM-SHA384:"
+        "ECDHE-ECDSA-AES128-GCM-SHA256:"
+        "ECDHE-RSA-AES128-GCM-SHA256:"
+        "ECDHE-ECDSA-CHACHA20-POLY1305:"
+        "ECDHE-RSA-CHACHA20-POLY1305"
+    )
+
+    # Força a ordem de preferência do servidor (suite mais forte primeiro)
+    ctx.options |= ssl.OP_CIPHER_SERVER_PREFERENCE
+
+    # Desativa compressão TLS
+    ctx.options |= ssl.OP_NO_COMPRESSION
+    
+    ctx.load_cert_chain(
+        certfile="certs/cert.pem",
+        keyfile="certs/key.pem"
+    )
+    return ctx
+
+#Handler global e log
+
+# Configura logging para ficheiro
+logging.basicConfig(
+    level=logging.ERROR,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    handlers=[
+        logging.FileHandler("logs/error.log"),
+        logging.StreamHandler() 
+    ]
+)
+logger = logging.getLogger(__name__)
+
+# Handler de ultimo recurso 
+@app.errorhandler(Exception)
+def handle_unexpected_error(e):
+    logger.error(f"Exceção não tratada: {traceback.format_exc()}")
+    
+    # Resposta genérica para o cliente
+    return jsonify({
+        "error": "Ocorreu um erro inesperado. Por favor tente mais tarde."
+    }), 500
+
+# Handler para erros HTTP 
+@app.errorhandler(HTTPException)
+def handle_http_error(e):
+    logger.warning(f"Erro HTTP {e.code}: {e.description} — {request.path}")
+    return jsonify({"error": e.description}), e.code
+
 # definição de blueprints
 app.register_blueprint(user_bp)
 app.register_blueprint(workspace_bp)
 
 if __name__ == "__main__":
-    app.run(debug=True, host = "0.0.0.0", port = "5003")
+    app.run(debug=True, host = "0.0.0.0", port = "5003", ssl_context=create_ssl_context())
