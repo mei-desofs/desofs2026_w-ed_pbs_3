@@ -53,6 +53,21 @@ def create_ssl_context():
     # TLS 1.2 como mínimo, 1.3 como preferido
     ctx.minimum_version = ssl.TLSVersion.TLSv1_2
     ctx.maximum_version = ssl.TLSVersion.TLSv1_3
+
+    ctx.set_ciphers(
+        "ECDHE-ECDSA-AES256-GCM-SHA384:"
+        "ECDHE-RSA-AES256-GCM-SHA384:"
+        "ECDHE-ECDSA-AES128-GCM-SHA256:"
+        "ECDHE-RSA-AES128-GCM-SHA256:"
+        "ECDHE-ECDSA-CHACHA20-POLY1305:"
+        "ECDHE-RSA-CHACHA20-POLY1305"
+    )
+
+    # Força a ordem de preferência do servidor (suite mais forte primeiro)
+    ctx.options |= ssl.OP_CIPHER_SERVER_PREFERENCE
+
+    # Desativa compressão TLS
+    ctx.options |= ssl.OP_NO_COMPRESSION
     
     ctx.load_cert_chain(
         certfile="certs/cert.pem",
