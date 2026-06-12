@@ -18,6 +18,9 @@ RUN mkdir -p /app/certs && \
     -days 365 -nodes \
     -subj "/CN=localhost"
 
+#logs
+RUN mkdir -p /app/logs
+
 # copiar dependências primeiro (cache Docker)
 COPY requirements.txt .
 

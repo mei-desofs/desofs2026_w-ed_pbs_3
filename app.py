@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, blueprints
 from flask_jwt_extended import JWTManager
 from flask import redirect, url_for
+from werkzeug.exceptions import HTTPException
 from src.API.user_routes import user_bp
 from datetime import timedelta
 from dotenv import load_dotenv
@@ -9,6 +10,8 @@ from connection import engine,SessionLocal
 import os
 from src.API.workspace_routes import workspace_bp
 import ssl
+import traceback
+import logging
 
 app = Flask(__name__)
 
@@ -75,6 +78,34 @@ def create_ssl_context():
     )
     return ctx
 
+#Handler global e log
+
+# Configura logging para ficheiro
+logging.basicConfig(
+    level=logging.ERROR,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    handlers=[
+        logging.FileHandler("logs/error.log"),
+        logging.StreamHandler() 
+    ]
+)
+logger = logging.getLogger(__name__)
+
+# Handler de ultimo recurso 
+@app.errorhandler(Exception)
+def handle_unexpected_error(e):
+    logger.error(f"Exceção não tratada: {traceback.format_exc()}")
+    
+    # Resposta genérica para o cliente
+    return jsonify({
+        "error": "Ocorreu um erro inesperado. Por favor tente mais tarde."
+    }), 500
+
+# Handler para erros HTTP 
+@app.errorhandler(HTTPException)
+def handle_http_error(e):
+    logger.warning(f"Erro HTTP {e.code}: {e.description} — {request.path}")
+    return jsonify({"error": e.description}), e.code
 
 # definição de blueprints
 app.register_blueprint(user_bp)
