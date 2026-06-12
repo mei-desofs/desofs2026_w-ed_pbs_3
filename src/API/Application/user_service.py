@@ -50,7 +50,7 @@ class UserService:
 
         return a_token, r_token
         
-    def refresh_atoken(self, username_str:str, raw_refresh_token:str) -> str:
+    def refresh_atoken(self, user_id:str, raw_refresh_token:str) -> str:
         """
         Atualiza o access token a JWT
         ARGS: username_str(str), raw_refresh_token(str)
@@ -59,7 +59,7 @@ class UserService:
         token_data = find_valid_token(raw_refresh_token)
         if not token_data:
             raise AuthenticationError("Refresh token inválido ou revogado.")
-        new_atoken = create_access_token(identity=username_str)
+        new_atoken = create_access_token(identity=user_id)
         return new_atoken
     
     def register_user(self, username_raw: str, password_raw: str):
