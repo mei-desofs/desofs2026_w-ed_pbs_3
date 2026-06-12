@@ -58,8 +58,10 @@ class WorkspaceRepository:
             """), {"user_id": user_id})
 
             return result.fetchone()[0]
+        
+        finally:
+            db.close()
 
-    
     def delete(self, workspace_id: str) -> bool:
         """
         Remove um workspace da base de dados.
