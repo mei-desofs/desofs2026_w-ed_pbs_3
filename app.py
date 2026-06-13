@@ -13,15 +13,16 @@ from src.API.doc_routes import doc_bp
 import ssl
 import traceback
 import logging
+from extensions import limiter
+from src.infrastructure.persistance.userDB import (start_mappers,mapper_registry)
 
 app = Flask(__name__)
 
-from src.infrastructure.persistance.userDB import (start_mappers,mapper_registry)
+limiter.init_app(app)
 # Inicializar ORM
 start_mappers()
 # Criar tabelas
 mapper_registry.metadata.create_all(engine)
-
 
 # inicialização JWT
 app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
@@ -112,6 +113,15 @@ def handle_http_error(e):
 app.register_blueprint(user_bp)
 app.register_blueprint(workspace_bp)
 app.register_blueprint(doc_bp)
+
+#Header de content type
+@app.after_request
+def set_content_type(response):
+    if response.content_type.startswith("application/json"):
+        response.content_type = "application/json; charset=utf-8"
+    elif response.content_type.startswith("text/html"):
+        response.content_type = "text/html; charset=utf-8"
+    return response
 
 if __name__ == "__main__":
     app.run(debug=True, host = "0.0.0.0", port = "5003", ssl_context=create_ssl_context())

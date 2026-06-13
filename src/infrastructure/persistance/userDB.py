@@ -130,6 +130,33 @@ def get_user_by_id(user_id: str) -> User | None:
             .filter(User.id == user_id)
             .first()
         )
+    except Exception as e:
+        print(f"Erro ao procurar utilizador: {e}")
+        return None
 
+    finally:
+        session.close()
+
+def update_password(user: User):
+    start_mappers()
+    session = SessionLocal()
+    try:
+       
+        user_id_str = str(user.id)
+        current_hash = str(user._password_hash) 
+        
+        session.query(user_table).filter(user_table.c.id == user_id_str).update(
+            {user_table.c.password_hash: current_hash},
+            synchronize_session=False 
+            
+        )
+        
+        session.commit()
+        print("Password atualizada com sucesso na BD!")
+        
+    except Exception as e:
+        session.rollback()
+        print(f"[CRITICAL DATABASE ERROR] Erro ao atualizar password: {e}")
+        raise UserPersistanceError(f"Erro ao atualizar password: {e}")
     finally:
         session.close()

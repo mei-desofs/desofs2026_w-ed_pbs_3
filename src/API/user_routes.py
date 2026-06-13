@@ -4,10 +4,12 @@ from src.API.Application.user_service import UserService, AuthenticationError
 from src.domain.user.value_objects import InvalidUserNameError, LengthError, RockError, PasswordError
 from src.infrastructure.persistance.userDB import get_user_by_id
 import traceback
+from extensions import limiter
 user_service = UserService()
 
 user_bp = Blueprint("users",__name__, template_folder='./user_templates', static_folder='./user_templates')
 @user_bp.route('/', methods = ['POST', 'GET'])
+@limiter.limit("Limite de tentativas superadas, agurade um minuto")
 def user_login():
     if request.method == 'GET':
         return render_template('/login.html')
@@ -79,8 +81,7 @@ def mainpage():
     if request.method == 'GET':
         return render_template('/mainpage.html')
 
-#Talvez venha a remover, serve apenas para testar a mainpage
-@user_bp.route('/get_current_user')
+@user_bp.route('/get_current_user', methods=['GET'])
 @jwt_required(optional=True)
 def get_current_user():
     """
@@ -103,28 +104,6 @@ def get_current_user():
         "logged_as": user._username
     }), 200
 
-@user_bp.route('/register', methods=['POST', 'GET'])
-def register():
-    if request.method == 'GET':
-        return render_template('/register.html')
-
-    data = request.get_json()
-    
-    try:
-        # O serviço vai chamar o User.create(), que chama o UserName.validate()
-        user_service.register_user(data['username'], data['password'])
-        return jsonify({"msg": "Utilizador criado com sucesso!"}), 201
-
-    except (InvalidUserNameError, LengthError, RockError) as e:
-        # Captura de Errors específicos do Value Object
-        return jsonify({"error": str(e)}), 400
-
-    except Exception as e:
-        # Um "catch-all" para erros inesperados (ex: BD em baixo)
-        # Aqui enviamos 500 porque o erro é do nosso lado
-        return jsonify({"error": "Erro interno no servidor"}), 500
-
-#TODO Rever logout
 @user_bp.route('/logout', methods=['POST'])
 @jwt_required()
 def logout():
@@ -140,3 +119,42 @@ def logout():
     unset_refresh_cookies(resp)
 
     return resp, 200
+
+@user_bp.route('/change_password', methods=['GET','POST'])
+@jwt_required()
+def change_password():
+    """
+    Altera a password do utilizador autenticado.
+    """
+
+    if request.method == 'GET':
+        return render_template('/alterPassw.html')
+    
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({"error": "O corpo da requisição deve ser um JSON válido."}), 400
+
+    current_password = data.get('current_password')
+    new_password = data.get('new_password')
+    confirm_password = data.get('confirm_password')
+
+    if not current_password or not new_password or not confirm_password:
+        return jsonify({"error": "Todos os campos são obrigatórios."}), 400
+    
+    user_id = get_jwt_identity()
+
+    if new_password != confirm_password:
+        return jsonify({"error": "As novas passwords não coincidem."}), 400
+    
+    try:
+        user_service.change_password(user_id, current_password, new_password)
+        
+        return jsonify({"redirect": url_for("users.user_login")}), 200
+
+    except (AuthenticationError, PasswordError) as e:
+        return jsonify({"error": str(e)}), 400
+        
+    except Exception as e:
+        # Log de segurança para erros inesperados do sistema (ex: quebra de ligação à BD)
+        print(f"[CRITICAL] Erro inesperado na rota: {e}")
+        return jsonify({"error": "Ocorreu um erro interno no sistema."}), 500
