@@ -117,3 +117,42 @@ def logout():
     unset_refresh_cookies(resp)
 
     return resp, 200
+
+@user_bp.route('/change_password', methods=['GET','POST'])
+@jwt_required()
+def change_password():
+    """
+    Altera a password do utilizador autenticado.
+    """
+
+    if request.method == 'GET':
+        return render_template('/alterPassw.html')
+    
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({"error": "O corpo da requisição deve ser um JSON válido."}), 400
+
+    current_password = data.get('current_password')
+    new_password = data.get('new_password')
+    confirm_password = data.get('confirm_password')
+
+    if not current_password or not new_password or not confirm_password:
+        return jsonify({"error": "Todos os campos são obrigatórios."}), 400
+    
+    user_id = get_jwt_identity()
+
+    if new_password != confirm_password:
+        return jsonify({"error": "As novas passwords não coincidem."}), 400
+    
+    try:
+        user_service.change_password(user_id, current_password, new_password)
+        
+        return jsonify({"redirect": url_for("users.user_login")}), 200
+
+    except (AuthenticationError, PasswordError) as e:
+        return jsonify({"error": str(e)}), 400
+        
+    except Exception as e:
+        # Log de segurança para erros inesperados do sistema (ex: quebra de ligação à BD)
+        print(f"[CRITICAL] Erro inesperado na rota: {e}")
+        return jsonify({"error": "Ocorreu um erro interno no sistema."}), 500

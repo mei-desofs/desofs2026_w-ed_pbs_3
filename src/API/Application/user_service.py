@@ -3,7 +3,7 @@ import json
 from flask_jwt_extended import create_access_token, create_refresh_token
 from src.domain.user.entities import User
 from src.domain.user.value_objects import InvalidUserNameError, PasswordError
-from src.infrastructure.persistance.userDB import find_by_username, create_user, get_user_by_username, UserPersistanceError
+from src.infrastructure.persistance.userDB import find_by_username, create_user, get_user_by_username,get_user_by_id,update_password, UserPersistanceError
 from src.infrastructure.persistance.access_tokensDB import revoke_all_user_tokens, save_refresh_token,revoke_token,find_valid_token, RefreshTokenPersistenceError
 from datetime import datetime, timedelta, timezone
 from src.domain.user.value_objects import HashedPassword
@@ -39,8 +39,6 @@ class UserService:
         
         user.password_vo.set_passw_to0s() # Limpa o hash da senha
 
-        #a_token = create_access_token(identity=username_str)
-        #r_token = create_refresh_token(identity=username_str)
         a_token = create_access_token(identity=str(user.id))
         r_token = create_refresh_token(identity=str(user.id))
 
@@ -110,3 +108,37 @@ class UserService:
             print(traceback.format_exc())
 
             raise Exception("Ocorreu um erro interno no sistema.")
+        
+
+    def change_password(self, user_id:str, current_password:str, new_password:str):
+        """
+        Altera a password do utilizador
+        ARGS: user_id(str), current_password(str), new_password(str)
+        returns: None ou outputs de excessões
+        """
+        user = get_user_by_id(user_id)
+
+        if user is None:
+            raise AuthenticationError("Utilizador não encontrado.")
+        
+        if not user._password_vo.matches(current_password):
+            raise AuthenticationError("A password atual está incorreta.")
+        
+        try:
+                user._password_vo.set_password(new_password)
+                user._password_hash = user._password_vo._value
+                update_password(user) 
+                revoke_all_user_tokens(user_id)
+                print(f"[LOG] Password do utilizador alterada com sucesso.")
+
+        except PasswordError as e:
+                print(f"[WARN] Tentativa de definir uma nova password inválida: {e}")
+                raise e
+
+        except UserPersistanceError as e:
+                print(f"[ERROR] Falha na base de dados ao alterar password: {e}")
+                raise AuthenticationError("Serviço temporariamente indisponível. Tente mais tarde.")
+            
+        finally:
+                if user and hasattr(user, 'password_vo'):
+                    user.password_vo.set_passw_to0s()
