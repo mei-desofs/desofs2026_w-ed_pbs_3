@@ -110,3 +110,71 @@ def get_document(doc_id):
         }), 404
 
     return jsonify(document), 200
+
+
+# ================== DOC atualizar ==================
+@doc_bp.route("/document/<doc_id>", methods=["PUT"])
+@jwt_required()
+def update_document(doc_id):
+    """
+    Atualiza um documento existente.
+    """
+
+    user_id = get_jwt_identity()
+
+    data = request.get_json()
+
+    title = data.get("title")
+    content = data.get("content")
+
+    if not title:
+        return jsonify({
+            "error": "Título obrigatório"
+        }), 400
+
+    updated = repo.update(
+        doc_id=doc_id,
+        user_id=user_id,
+        title=title,
+        markdown_content=content
+    )
+
+    if not updated:
+        return jsonify({
+            "error": "Documento não encontrado"
+        }), 404
+
+    return jsonify({
+        "message": "Documento atualizado"
+    }), 200
+
+
+# ================= DELETE =================
+@doc_bp.route("/document/<doc_id>", methods=["DELETE"])
+@jwt_required()
+def delete_document(doc_id):
+    """
+    Remove um documento do utilizador autenticado.
+
+    Arguments:
+        doc_id: Identificador do documento.
+
+    Returns:
+        Mensagem de sucesso ou erro.
+    """
+
+    user_id = get_jwt_identity()
+
+    deleted = repo.delete(
+        doc_id,
+        user_id
+    )
+
+    if not deleted:
+        return jsonify({
+            "error": "Documento não encontrado"
+        }), 404
+
+    return jsonify({
+        "message": "Documento eliminado"
+    }), 200

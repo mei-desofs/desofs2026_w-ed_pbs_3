@@ -55,6 +55,14 @@
     Criar Documento
 </button>
 
+<button
+    id="saveDocumentButton"
+    class="btn btn-warning mt-2"
+    onclick="saveDocument()"
+    style="display:none;">
+    Guardar Alterações
+</button>
+
 <h4 class="mt-4">Documentos</h4>
 
 <ul id="documentList" class="list-group"></ul>
@@ -227,10 +235,18 @@ function loadDocuments() {
                         ${doc.created_at}
                     </small>
 
+                    <br>
+
                     <button
                         class="btn btn-primary btn-sm mt-2"
                         onclick="openDocument('${doc.id}')">
                         Abrir Documento
+                    </button>
+
+                    <button
+                        class="btn btn-danger btn-sm mt-2"
+                        onclick="deleteDocument('${doc.id}')">
+                        Eliminar Documento
                     </button>
                 `;
 
@@ -252,7 +268,79 @@ function openDocument(documentId) {
                 doc.markdown_content;
 
             currentDocumentId = doc.id;
+
+            document.getElementById(
+                "saveDocumentButton"
+            ).style.display = "inline-block";
         });
+}
+
+function saveDocument() {
+
+    if (!currentDocumentId) {
+        alert("Nenhum documento selecionado");
+        return;
+    }
+
+    const title =
+        document.getElementById("docTitle").value;
+
+    const content =
+        document.getElementById("docContent").value;
+
+    apiRequest(`/document/${currentDocumentId}`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            title: title,
+            content: content
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+
+    alert("Documento atualizado com sucesso");
+
+    document.getElementById("docTitle").value = "";
+    document.getElementById("docContent").value = "";
+
+    currentDocumentId = null;
+
+    document.getElementById(
+        "saveDocumentButton"
+    ).style.display = "none";
+
+    loadDocuments();
+});
+}
+
+function deleteDocument(documentId) {
+
+    if (!confirm(
+        "Pretende eliminar este documento?"
+    )) {
+        return;
+    }
+
+    apiRequest(`/document/${documentId}`, {
+        method: "DELETE"
+    })
+    .then(res => res.json())
+    .then(() => {
+
+        document.getElementById("docTitle").value = "";
+        document.getElementById("docContent").value = "";
+
+        currentDocumentId = null;
+
+        document.getElementById(
+            "saveDocumentButton"
+        ).style.display = "none";
+
+        loadDocuments();
+    });
 }
 
 document.addEventListener("DOMContentLoaded", loadWorkspaces);

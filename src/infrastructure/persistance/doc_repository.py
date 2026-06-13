@@ -122,3 +122,53 @@ class DocumentRepository:
 
         finally:
             db.close()
+
+        # ================= UPDATE =================
+    def update(
+        self,
+        doc_id: str,
+        user_id: str,
+        title: str,
+        markdown_content: str
+    ) -> bool:
+        """
+        Atualiza um documento existente.
+
+        Arguments:
+            doc_id: Identificador do documento.
+            user_id: Utilizador proprietário.
+            title: Novo título.
+            markdown_content: Novo conteúdo markdown.
+
+        Returns:
+            True se o documento foi atualizado,
+            False caso contrário.
+        """
+
+        db = SessionLocal()
+
+        try:
+
+            result = db.execute(
+                text("""
+                    UPDATE documents
+                    SET
+                        title = :title,
+                        markdown_content = :markdown_content
+                    WHERE id = :doc_id
+                    AND created_by = :user_id
+                """),
+                {
+                    "doc_id": doc_id,
+                    "user_id": user_id,
+                    "title": title,
+                    "markdown_content": markdown_content
+                }
+            )
+
+            db.commit()
+
+            return result.rowcount > 0
+
+        finally:
+            db.close()
