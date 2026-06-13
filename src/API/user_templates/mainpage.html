@@ -63,6 +63,7 @@
 
 <script>
     let selectedWorkspaceId = null;
+    let currentDocumentId = null;
 
 apiRequest("{{ url_for('users.get_current_user') }}")
     .then(res => res.json())
@@ -221,13 +222,36 @@ function loadDocuments() {
 
                 li.innerHTML = `
                     <b>${doc.title}</b>
+
                     <small class="d-block text-muted">
                         ${doc.created_at}
                     </small>
+
+                    <button
+                        class="btn btn-primary btn-sm mt-2"
+                        onclick="openDocument('${doc.id}')">
+                        Abrir Documento
+                    </button>
                 `;
 
                 list.appendChild(li);
             });
+        });
+}
+
+function openDocument(documentId) {
+
+    apiRequest(`/document/${documentId}`)
+        .then(res => res.json())
+        .then(doc => {
+
+            document.getElementById("docTitle").value =
+                doc.title;
+
+            document.getElementById("docContent").value =
+                doc.markdown_content;
+
+            currentDocumentId = doc.id;
         });
 }
 

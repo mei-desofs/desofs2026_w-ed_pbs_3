@@ -84,3 +84,29 @@ def list_documents(workspace_id):
     return jsonify({
         "documents": repo.get_by_workspace(workspace_id, user_id)
     })
+
+
+# ================= GET SINGLE DOCUMENT =================
+@doc_bp.route("/document/<doc_id>", methods=["GET"])
+@jwt_required()
+def get_document(doc_id):
+    """
+    Obtém um documento específico do utilizador autenticado.
+
+    Arguments:
+        doc_id: Identificador do documento.
+
+    Returns:
+        Documento em formato JSON.
+    """
+
+    user_id = get_jwt_identity()
+
+    document = repo.get_by_id(doc_id, user_id)
+
+    if document is None:
+        return jsonify({
+            "error": "Documento não encontrado"
+        }), 404
+
+    return jsonify(document), 200
