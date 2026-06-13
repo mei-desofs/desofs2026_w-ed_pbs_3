@@ -4,10 +4,12 @@ from src.API.Application.user_service import UserService, AuthenticationError
 from src.domain.user.value_objects import InvalidUserNameError, LengthError, RockError, PasswordError
 from src.infrastructure.persistance.userDB import get_user_by_id
 import traceback
+from extensions import limiter
 user_service = UserService()
 
 user_bp = Blueprint("users",__name__, template_folder='./user_templates', static_folder='./user_templates')
 @user_bp.route('/', methods = ['POST', 'GET'])
+@limiter.limit("Limite de tentativas superadas, agurade um minuto")
 def user_login():
     if request.method == 'GET':
         return render_template('/login.html')

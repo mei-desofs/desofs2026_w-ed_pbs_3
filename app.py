@@ -12,15 +12,16 @@ from src.API.workspace_routes import workspace_bp
 import ssl
 import traceback
 import logging
+from extensions import limiter
+from src.infrastructure.persistance.userDB import (start_mappers,mapper_registry)
 
 app = Flask(__name__)
 
-from src.infrastructure.persistance.userDB import (start_mappers,mapper_registry)
+limiter.init_app(app)
 # Inicializar ORM
 start_mappers()
 # Criar tabelas
 mapper_registry.metadata.create_all(engine)
-
 
 # inicialização JWT
 app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
