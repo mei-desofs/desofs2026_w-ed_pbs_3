@@ -2,7 +2,6 @@ from sqlalchemy import create_engine, Table, Column, String, MetaData
 from sqlalchemy.orm import registry, sessionmaker
 from src.domain.user.entities import User
 from src.infrastructure.persistance.workspace_member_repository import WorkspaceMemberRepository
-from src.infrastructure.persistance.userDB import get_user_by_username
 from connection import (engine, SessionLocal)
 import os
 
