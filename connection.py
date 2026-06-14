@@ -6,7 +6,10 @@ import time
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("DB_HOST")
+DATABASE_URL = (
+        f"mysql+pymysql://{os.environ['DB_USER']}:{os.environ['DB_PASSWORD']}"
+        f"@{os.environ['DB_HOST']}/{os.environ['DB_NAME']}"
+    )
 
 MAX_RETRIES = 15
 RETRY_DELAY = 5

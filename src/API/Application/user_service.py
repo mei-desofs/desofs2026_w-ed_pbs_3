@@ -99,11 +99,10 @@ class UserService:
             return new_user
 
         except (InvalidUserNameError, PasswordError) as e:
-        # Relança os erros de domínio para que o Controller
+        # raise dos erros de domínio para que o Controller
             raise e
         
         except Exception as e:
-            # Log centralizado do erro real para auditoria interna (Prevenção de fuga de informação)
             print(f"[CRITICAL ERROR] Falha inesperada no registo: {e}")
             print(traceback.format_exc())
 

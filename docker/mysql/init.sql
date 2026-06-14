@@ -1,3 +1,7 @@
+REVOKE ALL PRIVILEGES ON *.* FROM 'markdawn_svc'@'%';
+GRANT SELECT, INSERT, UPDATE, DELETE ON markdawn.* TO 'markdawn_svc'@'%';
+FLUSH PRIVILEGES;
+
 CREATE TABLE users (
     id CHAR(36) PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE,
