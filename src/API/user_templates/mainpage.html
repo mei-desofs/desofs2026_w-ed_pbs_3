@@ -37,6 +37,42 @@
     Nenhum workspace selecionado
 </p>
 
+<hr>
+
+<h5>Membros do Workspace</h5>
+
+<input
+    id="memberUsername"
+    class="form-control mt-2"
+    placeholder="Username do utilizador">
+
+<select
+    id="memberRole"
+    class="form-select mt-2">
+
+    <option value="VIEWER">Viewer</option>
+    <option value="EDITOR">Editor</option>
+    <option value="ADMIN">Admin</option>
+
+</select>
+
+<button
+    class="btn btn-secondary mt-2"
+    onclick="addMember()">
+
+    Adicionar Membro
+
+</button>
+
+<ul
+    id="memberList"
+    class="list-group mt-3">
+
+</ul>
+
+<hr>
+
+
 <input
     id="docTitle"
     class="form-control mt-2"
@@ -172,6 +208,8 @@ function openWorkspace(workspaceId, workspaceName) {
         workspaceName;
 
     loadDocuments();
+
+    loadMembers();
 }
 
 function createDocument() {
@@ -340,6 +378,86 @@ function deleteDocument(documentId) {
         ).style.display = "none";
 
         loadDocuments();
+    });
+}
+
+function addMember() {
+
+    if (!selectedWorkspaceId) {
+        alert("Selecione um workspace");
+        return;
+    }
+
+    const username =
+        document.getElementById(
+            "memberUsername"
+        ).value;
+
+    const role =
+        document.getElementById(
+            "memberRole"
+        ).value;
+
+    apiRequest(
+        `/workspaces/${selectedWorkspaceId}/members`,
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                username: username,
+                role: role
+            })
+        }
+    )
+    .then(res => res.json())
+    .then(data => {
+
+        alert("Membro adicionado");
+
+        document.getElementById(
+            "memberUsername"
+        ).value = "";
+
+        loadMembers();
+    });
+}
+
+function loadMembers() {
+
+    if (!selectedWorkspaceId) {
+        return;
+    }
+
+    apiRequest(
+        `/workspaces/${selectedWorkspaceId}/members`
+    )
+    .then(res => res.json())
+    .then(data => {
+
+        const list =
+            document.getElementById(
+                "memberList"
+            );
+
+        list.innerHTML = "";
+
+        data.members.forEach(member => {
+
+            const li =
+                document.createElement("li");
+
+            li.className =
+                "list-group-item";
+
+            li.innerHTML = `
+                <b>${member.username}</b>
+                - ${member.role}
+            `;
+
+            list.appendChild(li);
+        });
     });
 }
 

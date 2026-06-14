@@ -8,9 +8,14 @@ from flask_limiter import Limiter
 
 from src.infrastructure.persistance.workspace_repository import WorkspaceRepository
 from src.domain.workspace.workspace_name import validate_workspace_name, InvalidWorkspaceNameError
+from src.infrastructure.persistance.workspace_member_repository import WorkspaceMemberRepository
+from src.infrastructure.persistance.userDB import (
+    get_user_by_username
+)
 
 workspace_bp = Blueprint("workspace", __name__)
 repo = WorkspaceRepository()
+member_repo = WorkspaceMemberRepository()
 
 WORKSPACE_URL = "http://workspace:8000/workspace"
 SERVICE_TOKEN = os.getenv("WORKSPACE_SERVICE_TOKEN")
@@ -81,6 +86,12 @@ def create_workspace():
         created_by=user_id
     )
 
+    member_repo.add_member(
+        workspace_id=workspace_id,
+        user_id=user_id,
+        role="ADMIN"
+    )
+
     return jsonify({
         "id": workspace_id,
         "name": name
@@ -110,3 +121,78 @@ def delete_workspace(workspace_id):
         return jsonify({"error": "not found"}), 404
 
     return jsonify({"message": "deleted"})
+
+
+# ================= ADD MEMBER =================
+@workspace_bp.route(
+    "/workspaces/<workspace_id>/members",
+    methods=["POST"]
+)
+@jwt_required()
+def add_member(workspace_id):
+
+    current_user = get_jwt_identity()
+
+    role = member_repo.get_role(
+        workspace_id,
+        current_user
+    )
+
+    if role != "ADMIN":
+        return jsonify({
+            "error": "Only admins can add members"
+        }), 403
+
+    data = request.get_json()
+
+    username = data.get("username")
+    new_role = data.get("role")
+
+    if not username or not new_role:
+        return jsonify({
+            "error": "Missing fields"
+        }), 400
+
+    user = get_user_by_username(username)
+
+    if not user:
+        return jsonify({
+            "error": "User not found"
+        }), 404
+
+    member_repo.add_member(
+        workspace_id,
+        user.id,
+        new_role
+    )
+
+    return jsonify({
+        "message": "Member added"
+    })
+
+
+# ================= LIST MEMBERS =================
+@workspace_bp.route(
+    "/workspaces/<workspace_id>/members",
+    methods=["GET"]
+)
+@jwt_required()
+def list_members(workspace_id):
+
+    current_user = get_jwt_identity()
+
+    role = member_repo.get_role(
+        workspace_id,
+        current_user
+    )
+
+    if role is None:
+        return jsonify({
+            "error": "Access denied"
+        }), 403
+
+    return jsonify({
+        "members": member_repo.get_members(
+            workspace_id
+        )
+    })
