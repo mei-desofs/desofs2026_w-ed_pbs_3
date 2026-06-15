@@ -78,6 +78,28 @@ jobs:
   unit-tests:
     runs-on: ubuntu-latest
 
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: markdawn_test
+          MYSQL_USER: testuser
+          MYSQL_PASSWORD: testpass
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    env:
+      DB_USER: testuser
+      DB_PASSWORD: testpass
+      DB_HOST: 127.0.0.1
+      DB_NAME: markdawn_test
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -93,13 +115,4 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run unit tests
-        run: |
-          python -m pytest tests/ -v --tb=short \
-            --junitxml=reports/pytest-report.xml
-
-      - name: Upload test report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: test-reports
-          path: reports/pytest-report.xml
+        run: python -m pytest tests/ -v --tb=short
