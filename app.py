@@ -13,16 +13,22 @@ from src.API.doc_routes import doc_bp
 import ssl
 import traceback
 import logging
-from extensions import limiter
+from extensions import limiter, oauth
 from src.infrastructure.persistance.userDB import (start_mappers,mapper_registry)
 
 app = Flask(__name__)
 
 limiter.init_app(app)
+oauth.init_app(app)
 # Inicializar ORM
 start_mappers()
 # Criar tabelas
 mapper_registry.metadata.create_all(engine)
+
+# config authlib google 
+app.config["GOOGLE_CLIENT_ID"] = os.getenv("GOOGLE_CLIENT_ID")
+app.config["GOOGLE_CLIENT_SECRET"] = os.getenv("GOOGLE_CLIENT_SECRET")
+app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY", "uma-chave-qualquer-estrita")
 
 # inicialização JWT
 app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
@@ -35,11 +41,11 @@ app.config["JWT_DECODE_LEEWAY"] = 0
 # config de aud
 app.config["JWT_ENCODE_AUDIENCE"] = os.getenv("JWT_AUD_KEY")      
 app.config["JWT_DECODE_AUDIENCE"] = os.getenv("JWT_AUD_KEY")    
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
 app.config["JWT_TOKEN_LOCATION"] = ["cookies"]
 app.config["JWT_COOKIE_CSRF_PROTECT"] = False
 app.config["JWT_COOKIE_HTTPONLY"] = True
-app.config["JWT_COOKIE_SAMESITE"] = "Strict"
 app.config["JWT_REFRESH_COOKIE_PATH"] = "/refresh"
 app.config["JWT_ACCESS_COOKIE_PATH"] = "/"
 app.config["JWT_COOKIE_SECURE"] = True
@@ -102,8 +108,9 @@ def handle_unexpected_error(e):
     return jsonify({
         "error": "Ocorreu um erro inesperado. Por favor tente mais tarde."
     }), 500
-
+"""
 # Handler para erros HTTP 
+"""
 @app.errorhandler(HTTPException)
 def handle_http_error(e):
     logger.warning(f"Erro HTTP {e.code}: {e.description} — {request.path}")
