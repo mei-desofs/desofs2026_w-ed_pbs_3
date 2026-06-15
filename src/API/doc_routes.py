@@ -8,6 +8,8 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from src.infrastructure.persistance.doc_repository import DocumentRepository
 from src.infrastructure.persistance.workspace_repository import WorkspaceRepository
 
+from src.infrastructure.logging.logger_config import logger, sanitize_log
+
 doc_bp = Blueprint("documents", __name__)
 
 repo = DocumentRepository()
@@ -22,12 +24,18 @@ SERVICE_TOKEN = os.getenv("WORKSPACE_SERVICE_TOKEN")
 @jwt_required()
 def create_document():
 
+    
     user_id = get_jwt_identity()
+
     data = request.get_json()
 
     workspace_id = data.get("workspace_id")
     title = data.get("title")
     content = data.get("content", "")
+
+    logger.info(
+        f"event=doc_create_attempt | who={sanitize_log(user_id)} | what=create_document | where=/documents"
+    )
 
     if not workspace_id or not title:
         return jsonify({"error": "missing fields"}), 400
@@ -66,7 +74,15 @@ def create_document():
     )
 
     if r.status_code != 200:
+        repo.delete(doc_id)
+        logger.warning(
+            f"event=doc_create_failed | who={sanitize_log(user_id)} | workspace_id={workspace_id}"
+        )
         return jsonify({"error": "workspace write failed"}), 500
+
+    logger.info(
+        f"event=doc_created | who={sanitize_log(user_id)} | doc_id={doc_id} | workspace_id={workspace_id} | file_path={file_path}"
+    )
 
     return jsonify({
         "id": doc_id,
@@ -109,6 +125,10 @@ def get_document(doc_id):
             "error": "Documento não encontrado"
         }), 404
 
+    logger.info(
+        f"event=doc_read | who={sanitize_log(user_id)} | doc_id={doc_id}"
+    )
+
     return jsonify(document), 200
 
 
@@ -144,6 +164,10 @@ def update_document(doc_id):
             "error": "Documento não encontrado"
         }), 404
 
+    logger.info(
+        f"event=doc_update | who={sanitize_log(user_id)} | doc_id={doc_id} | what=update_document"
+    )
+
     return jsonify({
         "message": "Documento atualizado"
     }), 200
@@ -174,6 +198,10 @@ def delete_document(doc_id):
         return jsonify({
             "error": "Documento não encontrado"
         }), 404
+
+    logger.info(
+        f"event=doc_delete | who={sanitize_log(user_id)} | doc_id={doc_id}"
+    )
 
     return jsonify({
         "message": "Documento eliminado"
