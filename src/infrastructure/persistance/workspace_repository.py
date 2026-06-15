@@ -25,10 +25,15 @@ class WorkspaceRepository:
         db = SessionLocal()
         try:
             result = db.execute(text("""
-                SELECT id, name, created_at
-                FROM workspaces
-                WHERE created_by = :user_id
-                ORDER BY created_at DESC
+                SELECT DISTINCT
+                    w.id,
+                    w.name,
+                    w.created_at
+                FROM workspaces w
+                JOIN workspace_members wm
+                    ON w.id = wm.workspace_id
+                WHERE wm.user_id = :user_id
+                ORDER BY w.created_at DESC
             """), {
                 "user_id": user_id
             })

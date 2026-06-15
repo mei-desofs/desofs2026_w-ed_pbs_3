@@ -7,11 +7,13 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from src.infrastructure.persistance.doc_repository import DocumentRepository
 from src.infrastructure.persistance.workspace_repository import WorkspaceRepository
+from src.infrastructure.persistance.workspace_member_repository import WorkspaceMemberRepository
 
 doc_bp = Blueprint("documents", __name__)
 
 repo = DocumentRepository()
 workspace_repo = WorkspaceRepository()
+workspace_member_repo = WorkspaceMemberRepository()
 
 WORKSPACE_URL = "http://workspace:8000/workspace"
 SERVICE_TOKEN = os.getenv("WORKSPACE_SERVICE_TOKEN")
@@ -81,8 +83,18 @@ def list_documents(workspace_id):
 
     user_id = get_jwt_identity()
 
+    role = workspace_member_repo.get_role(
+        workspace_id,
+        user_id
+    )
+
+    if not role:
+        return jsonify({
+            "error": "access denied"
+        }), 403
+
     return jsonify({
-        "documents": repo.get_by_workspace(workspace_id, user_id)
+        "documents": repo.get_by_workspace(workspace_id)
     })
 
 
@@ -90,24 +102,25 @@ def list_documents(workspace_id):
 @doc_bp.route("/document/<doc_id>", methods=["GET"])
 @jwt_required()
 def get_document(doc_id):
-    """
-    Obtém um documento específico do utilizador autenticado.
-
-    Arguments:
-        doc_id: Identificador do documento.
-
-    Returns:
-        Documento em formato JSON.
-    """
 
     user_id = get_jwt_identity()
 
-    document = repo.get_by_id(doc_id, user_id)
+    document = repo.get_by_id(doc_id)
 
     if document is None:
         return jsonify({
             "error": "Documento não encontrado"
         }), 404
+
+    role = workspace_member_repo.get_role(
+        document["workspace_id"],
+        user_id
+    )
+
+    if not role:
+        return jsonify({
+            "error": "access denied"
+        }), 403
 
     return jsonify(document), 200
 
@@ -116,33 +129,36 @@ def get_document(doc_id):
 @doc_bp.route("/document/<doc_id>", methods=["PUT"])
 @jwt_required()
 def update_document(doc_id):
-    """
-    Atualiza um documento existente.
-    """
 
     user_id = get_jwt_identity()
+
+    document = repo.get_by_id(doc_id)
+
+    if not document:
+        return jsonify({
+            "error": "Documento não encontrado"
+        }), 404
+
+    role = workspace_member_repo.get_role(
+        document["workspace_id"],
+        user_id
+    )
+
+    if role not in ["EDITOR", "ADMIN"]:
+        return jsonify({
+            "error": "permission denied"
+        }), 403
 
     data = request.get_json()
 
     title = data.get("title")
     content = data.get("content")
 
-    if not title:
-        return jsonify({
-            "error": "Título obrigatório"
-        }), 400
-
     updated = repo.update(
         doc_id=doc_id,
-        user_id=user_id,
         title=title,
         markdown_content=content
     )
-
-    if not updated:
-        return jsonify({
-            "error": "Documento não encontrado"
-        }), 404
 
     return jsonify({
         "message": "Documento atualizado"
@@ -153,21 +169,28 @@ def update_document(doc_id):
 @doc_bp.route("/document/<doc_id>", methods=["DELETE"])
 @jwt_required()
 def delete_document(doc_id):
-    """
-    Remove um documento do utilizador autenticado.
-
-    Arguments:
-        doc_id: Identificador do documento.
-
-    Returns:
-        Mensagem de sucesso ou erro.
-    """
 
     user_id = get_jwt_identity()
 
+    document = repo.get_by_id(doc_id)
+
+    if not document:
+        return jsonify({
+            "error": "Documento não encontrado"
+        }), 404
+
+    role = workspace_member_repo.get_role(
+        document["workspace_id"],
+        user_id
+    )
+
+    if role != "ADMIN":
+        return jsonify({
+            "error": "permission denied"
+        }), 403
+
     deleted = repo.delete(
         doc_id,
-        user_id
     )
 
     if not deleted:

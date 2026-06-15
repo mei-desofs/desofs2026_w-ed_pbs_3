@@ -41,7 +41,7 @@ class DocumentRepository:
             db.close()
 
     # ================= LIST BY WORKSPACE =================
-    def get_by_workspace(self, workspace_id, user_id):
+    def get_by_workspace(self, workspace_id):
 
         db = SessionLocal()
         try:
@@ -49,11 +49,9 @@ class DocumentRepository:
                 SELECT id, title, created_at
                 FROM documents
                 WHERE workspace_id = :workspace_id
-                  AND created_by = :user_id
                 ORDER BY created_at DESC
             """), {
-                "workspace_id": workspace_id,
-                "user_id": user_id
+                "workspace_id": workspace_id
             })
 
             rows = result.fetchall()
@@ -71,18 +69,23 @@ class DocumentRepository:
             db.close()
 
     # ================= GET SINGLE DOC =================
-    def get_by_id(self, doc_id, user_id):
+    def get_by_id(self, doc_id):
 
         db = SessionLocal()
         try:
             result = db.execute(text("""
-                SELECT id, workspace_id, title, markdown_content, file_path, created_at
+                SELECT
+                    id,
+                    workspace_id,
+                    title,
+                    markdown_content,
+                    file_path,
+                    created_by,
+                    created_at
                 FROM documents
                 WHERE id = :id
-                  AND created_by = :user_id
             """), {
                 "id": doc_id,
-                "user_id": user_id
             })
 
             row = result.fetchone()
@@ -96,24 +99,23 @@ class DocumentRepository:
                 "title": row[2],
                 "markdown_content": row[3],
                 "file_path": row[4],
-                "created_at": row[5].isoformat() if row[5] else None
+                "created_by": row[5],
+                "created_at": row[6].isoformat() if row[6] else None
             }
 
         finally:
             db.close()
 
     # ================= DELETE =================
-    def delete(self, doc_id, user_id):
+    def delete(self, doc_id):
 
         db = SessionLocal()
         try:
             result = db.execute(text("""
                 DELETE FROM documents
                 WHERE id = :id
-                  AND created_by = :user_id
             """), {
-                "id": doc_id,
-                "user_id": user_id
+                "id": doc_id
             })
 
             db.commit()
@@ -127,7 +129,6 @@ class DocumentRepository:
     def update(
         self,
         doc_id: str,
-        user_id: str,
         title: str,
         markdown_content: str
     ) -> bool:
@@ -156,11 +157,9 @@ class DocumentRepository:
                         title = :title,
                         markdown_content = :markdown_content
                     WHERE id = :doc_id
-                    AND created_by = :user_id
                 """),
                 {
                     "doc_id": doc_id,
-                    "user_id": user_id,
                     "title": title,
                     "markdown_content": markdown_content
                 }

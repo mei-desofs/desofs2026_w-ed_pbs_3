@@ -108,6 +108,7 @@
 <script>
     let selectedWorkspaceId = null;
     let currentDocumentId = null;
+    let currentRole = null;
 
 apiRequest("{{ url_for('users.get_current_user') }}")
     .then(res => res.json())
@@ -210,6 +211,8 @@ function openWorkspace(workspaceId, workspaceName) {
     loadDocuments();
 
     loadMembers();
+
+    loadRole();
 }
 
 function createDocument() {
@@ -281,11 +284,13 @@ function loadDocuments() {
                         Abrir Documento
                     </button>
 
+                    ${currentRole === "ADMIN" ? `
                     <button
                         class="btn btn-danger btn-sm mt-2"
                         onclick="deleteDocument('${doc.id}')">
                         Eliminar Documento
                     </button>
+                    ` : ""}
                 `;
 
                 list.appendChild(li);
@@ -459,6 +464,50 @@ function loadMembers() {
             list.appendChild(li);
         });
     });
+}
+
+function loadRole() {
+
+    apiRequest(
+        `/workspaces/${selectedWorkspaceId}/role`
+    )
+    .then(res => res.json())
+    .then(data => {
+
+        currentRole = data.role;
+
+        applyPermissions();
+    });
+}
+
+function applyPermissions() {
+    const saveButton =
+    document.getElementById(
+        "saveDocumentButton"
+    );
+
+    const addMemberButton =
+        document.querySelector(
+            "button[onclick='addMember()']"
+        );
+
+    if (currentRole === "VIEWER") {
+
+        saveButton.style.display = "none";
+
+        addMemberButton.style.display = "none";
+    }
+
+    else if (currentRole === "EDITOR") {
+
+        addMemberButton.style.display = "none";
+    }
+
+    else if (currentRole === "ADMIN") {
+
+        addMemberButton.style.display =
+            "inline-block";
+    }
 }
 
 document.addEventListener("DOMContentLoaded", loadWorkspaces);

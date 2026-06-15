@@ -115,14 +115,28 @@ def list_workspaces():
 @jwt_required()
 def delete_workspace(workspace_id):
 
+    user_id = get_jwt_identity()
+
+    role = member_repo.get_role(
+        workspace_id,
+        user_id
+    )
+
+    if role != "ADMIN":
+        return jsonify({
+            "error": "permission denied"
+        }), 403
+
     deleted = repo.delete(workspace_id)
 
     if not deleted:
-        return jsonify({"error": "not found"}), 404
+        return jsonify({
+            "error": "not found"
+        }), 404
 
-    return jsonify({"message": "deleted"})
-
-
+    return jsonify({
+        "message": "deleted"
+    })
 # ================= ADD MEMBER =================
 @workspace_bp.route(
     "/workspaces/<workspace_id>/members",
@@ -195,4 +209,30 @@ def list_members(workspace_id):
         "members": member_repo.get_members(
             workspace_id
         )
+    })
+
+
+# ================= GET ROLE =================
+
+@workspace_bp.route(
+    "/workspaces/<workspace_id>/role",
+    methods=["GET"]
+)
+@jwt_required()
+def get_role(workspace_id):
+
+    user_id = get_jwt_identity()
+
+    role = member_repo.get_role(
+        workspace_id,
+        user_id
+    )
+
+    if not role:
+        return jsonify({
+            "error": "access denied"
+        }), 403
+
+    return jsonify({
+        "role": role
     })
