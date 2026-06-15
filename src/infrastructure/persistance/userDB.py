@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine, Table, Column, String, MetaData
 from sqlalchemy.orm import registry, sessionmaker
 from src.domain.user.entities import User
+from src.infrastructure.persistance.workspace_member_repository import WorkspaceMemberRepository
 from connection import (engine, SessionLocal,shared_metadata)
 import os
 
@@ -11,6 +12,7 @@ class RegistingUserError(UserPersistanceError):
 
 mapper_registry = registry()
 metadata = shared_metadata  # Usar o mesmo metadata partilhado para todas as tabelas
+member_repo = WorkspaceMemberRepository()
 
 # ASVS 5.0: password_hash passa a nullable=True para suportar contas puras de OAuth
 user_table = Table(
