@@ -25,15 +25,15 @@ class WorkspaceRepository:
         db = SessionLocal()
         try:
             result = db.execute(text("""
-                SELECT DISTINCT
+                SELECT
                     w.id,
                     w.name,
-                    w.created_at
+                    w.created_at,
+                    wm.role
                 FROM workspaces w
                 JOIN workspace_members wm
                     ON w.id = wm.workspace_id
                 WHERE wm.user_id = :user_id
-                ORDER BY w.created_at DESC
             """), {
                 "user_id": user_id
             })
@@ -44,7 +44,8 @@ class WorkspaceRepository:
                 {
                     "id": r[0],
                     "name": r[1],
-                    "created_at": r[2].isoformat() if r[2] else None
+                    "created_at": r[2].isoformat() if r[2] else None,
+                    "role": r[3]
                 }
                 for r in rows
             ]
