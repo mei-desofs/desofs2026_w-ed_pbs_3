@@ -1,4 +1,4 @@
-name: Security Scan (Push) - SAST + SCA + Secrets
+name: Security Scan (Push) - SAST + SCA + Secrets + Unit Tests
 
 on:
   push:
@@ -6,6 +6,7 @@ on:
 jobs:
 
   security-scan:
+    needs: unit-tests
     runs-on: ubuntu-latest
 
     steps:
@@ -73,3 +74,32 @@ jobs:
         with:
           name: security-reports
           path: reports/
+
+  unit-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run unit tests
+        run: |
+          python -m pytest tests/ -v --tb=short \
+            --junitxml=reports/pytest-report.xml
+
+      - name: Upload test report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-reports
+          path: reports/pytest-report.xml
