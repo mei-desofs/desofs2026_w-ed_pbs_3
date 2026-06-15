@@ -26,21 +26,28 @@ SERVICE_TOKEN = os.getenv("WORKSPACE_SERVICE_TOKEN")
 @jwt_required()
 def create_document():
 
-    
-    user_id = get_jwt_identity()
+    MAX_DOC_SIZE = 100_000  # ~100 KB
 
+    user_id = get_jwt_identity()
     data = request.get_json()
 
     workspace_id = data.get("workspace_id")
     title = data.get("title")
     content = data.get("content", "")
 
+    # ================= VALIDATION =================
+    if not workspace_id or not title:
+        return jsonify({"error": "missing fields"}), 400
+
+    if len(title) > 200:
+        return jsonify({"error": "title too long"}), 400
+
+    if len(content.encode("utf-8")) > MAX_DOC_SIZE:
+        return jsonify({"error": "document too large"}), 413
+
     logger.info(
         f"event=doc_create_attempt | who={sanitize_log(user_id)} | what=create_document | where=/documents"
     )
-
-    if not workspace_id or not title:
-        return jsonify({"error": "missing fields"}), 400
 
     workspace = workspace_repo.get_by_id(workspace_id)
 
@@ -51,7 +58,7 @@ def create_document():
 
     file_path = f"/workspaces/{user_id}/{workspace_id}/documents/{doc_id}.md"
 
-    # 1. DB
+    # ================= DB =================
     repo.create(
         id=doc_id,
         workspace_id=workspace_id,
@@ -61,7 +68,7 @@ def create_document():
         created_by=user_id
     )
 
-    # 2. FILE SYSTEM (OBRIGATÓRIO via workspace-server)
+    # ================= FILE SYSTEM =================
     r = requests.post(
         f"{WORKSPACE_URL}/write-document",
         json={
