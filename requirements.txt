@@ -1,3 +1,4 @@
+Authlib==1.7.2
 blinker==1.9.0
 certifi==2026.5.20
 cffi==2.0.0
@@ -14,6 +15,7 @@ idna==3.18
 iniconfig==2.3.0
 itsdangerous==2.2.0
 Jinja2==3.1.6
+joserfc==1.7.1
 limits==5.8.0
 MarkupSafe==3.0.3
 mysql-connector-python==9.7.0

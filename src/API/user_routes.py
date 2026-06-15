@@ -4,12 +4,14 @@ from src.API.Application.user_service import UserService, AuthenticationError
 from src.domain.user.value_objects import InvalidUserNameError, LengthError, RockError, PasswordError
 from src.infrastructure.persistance.userDB import get_user_by_id
 import traceback
-from extensions import limiter
+from extensions import limiter, oauth
+from authlib.integrations.flask_client import OAuth
+
 user_service = UserService()
 
 user_bp = Blueprint("users",__name__, template_folder='./user_templates', static_folder='./user_templates')
 @user_bp.route('/', methods = ['POST', 'GET'])
-@limiter.limit("Limite de tentativas superadas, agurade um minuto")
+@limiter.limit("5 per minute")
 def user_login():
     if request.method == 'GET':
         return render_template('/login.html')
@@ -26,6 +28,39 @@ def user_login():
     except AuthenticationError:
         return jsonify({"error": "Credenciais inválidas"}), 401
 
+#Rota que o utilizador usa para login google
+@user_bp.route('/login/google')
+def google_login():
+    redirect_uri = url_for('users.google_callback', _external=True)
+    #Authlib gera e valida internamente o param anti-CSRF 
+    return oauth.google.authorize_redirect(redirect_uri)
+
+@user_bp.route('/login/google/callback')
+def google_callback():
+    try:
+        token = oauth.google.authorize_access_token()
+        user_info = token.get('userinfo')
+        
+        if not user_info:
+            return jsonify({"error": "Não foi possível obter dados do Google."}), 400
+
+        google_id = user_info.get('sub') # ID Imutável (ASVS Requirement)
+        email = user_info.get('email')   # username inicial do sistema
+
+        #utenticar ou criar o utilizador via OAuth
+        a_token, r_token = user_service.authenticate_oauth(oauth_provider='google', oauth_id=google_id,  email_str=email)
+
+       
+        resp = redirect(url_for("users.mainpage"))
+        set_access_cookies(resp, a_token)
+        set_refresh_cookies(resp, r_token)
+        
+        return resp
+
+    except AuthenticationError as e:
+        return jsonify({"error": str(e)}), 401
+    except Exception as e:
+        return jsonify({"error": "Falha na autenticação externa."}), 500
 
 @user_bp.route('/regist', methods=['POST', 'GET'])
 def regist():

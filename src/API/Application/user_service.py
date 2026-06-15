@@ -1,13 +1,17 @@
+import re
+
 from flask import Flask, jsonify, request
 import json
 from flask_jwt_extended import create_access_token, create_refresh_token
 from src.domain.user.entities import User
 from src.domain.user.value_objects import InvalidUserNameError, PasswordError
-from src.infrastructure.persistance.userDB import find_by_username, create_user, get_user_by_username,get_user_by_id,update_password, UserPersistanceError
+from src.infrastructure.persistance.userDB import find_by_username, create_user, get_user_by_username,get_user_by_id,update_password,get_user_by_oauth, create_user_oauth, UserPersistanceError
 from src.infrastructure.persistance.access_tokensDB import revoke_all_user_tokens, save_refresh_token,revoke_token,find_valid_token, RefreshTokenPersistenceError
 from datetime import datetime, timedelta, timezone
 from src.domain.user.value_objects import HashedPassword
 import traceback
+import uuid
+from datetime import datetime, timezone, timedelta
 
 class AuthenticationError(Exception):
     pass
@@ -53,6 +57,53 @@ class UserService:
             print(f"[ERROR] Falha ao persistir refresh token para {username_str}: {e}")
             
             raise AuthenticationError("Serviço temporariamente indisponível. Tente mais tarde.")
+
+        return a_token, r_token
+    
+
+    def authenticate_oauth(self, oauth_provider: str, oauth_id: str, email_str: str) -> tuple[str, str]:
+        """
+        Autentica ou regista um utilizador via Provedor OAuth externo (Google).
+        Cumpre os requisitos ASVS 5.0 de provisionamento seguro.
+        """
+        if not oauth_id or not oauth_provider:
+            raise AuthenticationError("Dados de autenticação externa inválidos.")
+
+        # Tentar encontrar o utilizador pelo ID do Google 
+        user = get_user_by_oauth(oauth_provider, oauth_id)
+
+        # Se o utilizador não existir, regista via OAuth do domínio
+        if user is None:
+            # ASVS: Verificar se o username já está ocupado por uma conta local
+            sanitized_base = re.sub(r'[^a-zA-Z0-9_]', '_', email_str)
+            if find_by_username(sanitized_base):
+                username_final = f"{sanitized_base}_{str(uuid.uuid4())[:8]}"
+            else:
+                username_final = sanitized_base
+
+            user = User.create_oauth(username_str=username_final,oauth_provider=oauth_provider,oauth_id=oauth_id)
+            
+            # Persistência
+            create_user_oauth(user) 
+
+        try:
+            revoke_all_user_tokens(str(user.id))
+        except Exception as e:
+            print(f"[WARN] Não foi possível revogar sessões: {e}")
+
+        a_token = create_access_token(identity=str(user.id))
+        r_token = create_refresh_token(identity=str(user.id))
+
+        try:
+            expires_at = datetime.now(timezone.utc) + timedelta(days=30) 
+            save_refresh_token(
+                user_id=str(user.id),
+                raw_token=r_token,
+                expires_at=expires_at,
+            )
+        except Exception as e:
+            print(f"[ERROR] Falha ao persistir refresh token: {e}")
+            raise AuthenticationError("Serviço indisponível temporariamente.")
 
         return a_token, r_token
         

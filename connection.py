@@ -3,6 +3,8 @@ from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
 import os
 import time
+from sqlalchemy import MetaData
+shared_metadata = MetaData()
 
 load_dotenv()
 
