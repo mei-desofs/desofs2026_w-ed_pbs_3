@@ -4,7 +4,7 @@ from authlib.integrations.flask_client import OAuth
 limiter = Limiter(get_remote_address)
 oauth = OAuth()
 
-# Esta configuração diz à Authlib para ler automaticamente as credenciais do app.config
+#configuração diz à Authlib para ler automaticamente as credenciais do app.config
 google = oauth.register(
     name='google',
     server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',

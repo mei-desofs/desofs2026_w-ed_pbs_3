@@ -32,7 +32,7 @@ def user_login():
 @user_bp.route('/login/google')
 def google_login():
     redirect_uri = url_for('users.google_callback', _external=True)
-    #Authlib gera e valida internamente o param anti-CSRF (ASVS)
+    #Authlib gera e valida internamente o param anti-CSRF 
     return oauth.google.authorize_redirect(redirect_uri)
 
 @user_bp.route('/login/google/callback')
@@ -45,12 +45,12 @@ def google_callback():
             return jsonify({"error": "Não foi possível obter dados do Google."}), 400
 
         google_id = user_info.get('sub') # ID Imutável (ASVS Requirement)
-        email = user_info.get('email')   # Usaremos como o username inicial do sistema
+        email = user_info.get('email')   # username inicial do sistema
 
-        #Chamar o serviço para autenticar ou criar o utilizador via OAuth
+        #utenticar ou criar o utilizador via OAuth
         a_token, r_token = user_service.authenticate_oauth(oauth_provider='google', oauth_id=google_id,  email_str=email)
 
-        # Se correu bem, criamos a resposta e injetamos os cookies JWT que já tinhas
+       
         resp = redirect(url_for("users.mainpage"))
         set_access_cookies(resp, a_token)
         set_refresh_cookies(resp, r_token)
@@ -60,12 +60,7 @@ def google_callback():
     except AuthenticationError as e:
         return jsonify({"error": str(e)}), 401
     except Exception as e:
-        tb = traceback.format_exc()
-        print("\n" + "="*50)
-        print("ERRO REAL DETETADO NO CALLBACK:")
-        print(traceback.format_exc())
-        print("="*50 + "\n")
-        return jsonify({"error": "Falha na autenticação externa.", "detail": tb}), 500
+        return jsonify({"error": "Falha na autenticação externa."}), 500
 
 @user_bp.route('/regist', methods=['POST', 'GET'])
 def regist():
