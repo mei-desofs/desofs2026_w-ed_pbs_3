@@ -183,8 +183,7 @@ def update_document(doc_id):
         markdown_content=content
     )
 
-<<<<<<< HEAD
-=======
+
     if not updated:
         return jsonify({
             "error": "Documento não encontrado"
@@ -194,7 +193,6 @@ def update_document(doc_id):
         f"event=doc_update | who={sanitize_log(user_id)} | doc_id={doc_id} | what=update_document"
     )
 
->>>>>>> 7433407479743cd58f45638fb3cc70e53b5c515d
     return jsonify({
         "message": "Documento atualizado"
     }), 200
