@@ -13,6 +13,8 @@ from src.infrastructure.persistance.userDB import (
     get_user_by_username
 )
 
+from src.infrastructure.logging.logger_config import logger, sanitize_log
+
 workspace_bp = Blueprint("workspace", __name__)
 repo = WorkspaceRepository()
 member_repo = WorkspaceMemberRepository()
@@ -36,11 +38,14 @@ limiter = Limiter(key_func=get_user_id)
 def create_workspace():
 
     user_id = get_jwt_identity()
+    logger.info(
+        f"event=workspace_create_attempt | who={sanitize_log(user_id)} | what=create_workspace | where=/workspaces/create")
     data = request.get_json()
 
     name = data.get("name")
 
     if not name:
+        logger.warning(f"WORKSPACE_CREATE_INVALID_NAME | user_id={user_id} | name={name}")
         return jsonify({"error": "Workspace name required"}), 400
 
     # ================= QUOTA CHECK =================
@@ -74,6 +79,10 @@ def create_workspace():
     )
 
     if r.status_code != 200:
+        logger.error(
+            f"event=workspace_service_error | who={sanitize_log(user_id)} | what=create_workspace | status={r.status_code}"
+        )
+        repo.delete(workspace_id)
         return jsonify({"error": "workspace service error"}), 500
 
     path = r.json()["path"]
@@ -84,6 +93,10 @@ def create_workspace():
         name=name,
         folder_path=path,
         created_by=user_id
+    )
+
+    logger.info(
+        f"event=workspace_created | who={sanitize_log(user_id)} | what=create_workspace | where=/workspaces/create | workspace_id={workspace_id}"
     )
 
     member_repo.add_member(
@@ -115,6 +128,10 @@ def list_workspaces():
 @jwt_required()
 def delete_workspace(workspace_id):
 
+    logger.info(
+        f"event=workspace_delete_attempt | who={sanitize_log(get_jwt_identity())} | what=delete_workspace | workspace_id={workspace_id}"
+    )
+
     user_id = get_jwt_identity()
 
     role = member_repo.get_role(
@@ -134,6 +151,20 @@ def delete_workspace(workspace_id):
             "error": "not found"
         }), 404
 
+    deleted = repo.delete(workspace_id)
+
+    if not deleted:
+        logger.warning(
+            f"event=workspace_delete_not_found | workspace_id={workspace_id}"
+        )
+        return jsonify({"error": "not found"}), 404
+
+    logger.info(
+            f"event=workspace_deleted | workspace_id={workspace_id}"
+        )
+    return jsonify({"message": "deleted"})
+
+
     return jsonify({
         "message": "deleted"
     })
@@ -146,6 +177,9 @@ def delete_workspace(workspace_id):
 def add_member(workspace_id):
 
     current_user = get_jwt_identity()
+    logger.info(
+        f"event=add_member_attempt | who={current_user} | what=add_member | where=/workspaces/{workspace_id}/members"
+    )
 
     role = member_repo.get_role(
         workspace_id,
@@ -153,6 +187,9 @@ def add_member(workspace_id):
     )
 
     if role != "ADMIN":
+        logger.warning(
+            f"event=add_member_forbidden | who={current_user} | workspace_id={workspace_id}"
+        )
         return jsonify({
             "error": "Only admins can add members"
         }), 403
@@ -163,6 +200,9 @@ def add_member(workspace_id):
     new_role = data.get("role")
 
     if not username or not new_role:
+        logger.warning(
+            f"event=add_member_invalid_payload | who={current_user} | workspace_id={workspace_id}"
+        )
         return jsonify({
             "error": "Missing fields"
         }), 400
@@ -170,6 +210,9 @@ def add_member(workspace_id):
     user = get_user_by_username(username)
 
     if not user:
+        logger.warning(
+            f"event=add_member_user_not_found | who={current_user} | username={username} | workspace_id={workspace_id}"
+        )
         return jsonify({
             "error": "User not found"
         }), 404
@@ -178,6 +221,10 @@ def add_member(workspace_id):
         workspace_id,
         user.id,
         new_role
+    )
+
+    logger.info(
+        f"event=member_added | who={current_user} | workspace_id={workspace_id} | new_user={user.id} | role={new_role}"
     )
 
     return jsonify({

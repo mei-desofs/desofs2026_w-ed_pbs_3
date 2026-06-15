@@ -114,6 +114,7 @@ app.register_blueprint(user_bp)
 app.register_blueprint(workspace_bp)
 app.register_blueprint(doc_bp)
 
+'''
 #Header de content type
 @app.after_request
 def set_content_type(response):
@@ -121,6 +122,23 @@ def set_content_type(response):
         response.content_type = "application/json; charset=utf-8"
     elif response.content_type.startswith("text/html"):
         response.content_type = "text/html; charset=utf-8"
+    return response
+'''
+
+@app.after_request
+def set_security_headers(response):
+
+    # Content-Type normalization
+    if response.content_type.startswith("application/json"):
+        response.content_type = "application/json; charset=utf-8"
+    elif response.content_type.startswith("text/html"):
+        response.content_type = "text/html; charset=utf-8"
+
+    # ASVS V14 caching protection
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+
     return response
 
 if __name__ == "__main__":
