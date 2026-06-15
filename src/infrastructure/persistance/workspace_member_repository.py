@@ -136,3 +136,32 @@ class WorkspaceMemberRepository:
 
         finally:
             db.close()
+
+def update_role(
+    self,
+    workspace_id: str,
+    user_id: str,
+    role: str
+):
+
+    db = SessionLocal()
+
+    try:
+
+        result = db.execute(text("""
+            UPDATE workspace_members
+            SET role = :role
+            WHERE workspace_id = :workspace_id
+            AND user_id = :user_id
+        """), {
+            "workspace_id": workspace_id,
+            "user_id": user_id,
+            "role": role
+        })
+
+        db.commit()
+
+        return result.rowcount > 0
+
+    finally:
+        db.close()

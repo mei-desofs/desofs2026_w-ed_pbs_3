@@ -431,6 +431,57 @@ function addMember() {
     });
 }
 
+function updateMemberRole(
+    memberId,
+    role
+) {
+
+    apiRequest(
+        `/workspaces/${selectedWorkspaceId}/members/${memberId}`,
+        {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                role: role
+            })
+        }
+    )
+    .then(res => res.json())
+    .then(() => {
+
+        alert("Role atualizada");
+
+        loadMembers();
+
+    });
+}
+
+function removeMember(memberId) {
+
+    if (!confirm(
+        "Pretende remover este membro?"
+    )) {
+        return;
+    }
+
+    apiRequest(
+        `/workspaces/${selectedWorkspaceId}/members/${memberId}`,
+        {
+            method: "DELETE"
+        }
+    )
+    .then(res => res.json())
+    .then(() => {
+
+        alert("Membro removido");
+
+        loadMembers();
+
+    });
+}
+
 function loadMembers() {
 
     if (!selectedWorkspaceId) {
@@ -461,6 +512,42 @@ function loadMembers() {
             li.innerHTML = `
                 <b>${member.username}</b>
                 - ${member.role}
+
+                ${currentRole === "ADMIN" ? `
+
+                <select
+                    onchange="updateMemberRole(
+                        '${member.id}',
+                        this.value
+                    )"
+                    class="form-select form-select-sm mt-2">
+
+                    <option value="VIEWER"
+                        ${member.role === "VIEWER" ? "selected" : ""}>
+                        Viewer
+                    </option>
+
+                    <option value="EDITOR"
+                        ${member.role === "EDITOR" ? "selected" : ""}>
+                        Editor
+                    </option>
+
+                    <option value="ADMIN"
+                        ${member.role === "ADMIN" ? "selected" : ""}>
+                        Admin
+                    </option>
+
+                </select>
+
+                <button
+                    class="btn btn-danger btn-sm mt-2"
+                    onclick="removeMember('${member.id}')">
+
+                    Remover
+
+                </button>
+
+                ` : ""}
             `;
 
             list.appendChild(li);
