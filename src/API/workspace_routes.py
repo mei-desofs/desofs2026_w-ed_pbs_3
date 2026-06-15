@@ -283,3 +283,92 @@ def get_role(workspace_id):
     return jsonify({
         "role": role
     })
+
+#================= UPDATE ROLE =================
+
+@workspace_bp.route(
+    "/workspaces/<workspace_id>/members/<member_id>",
+    methods=["PUT"]
+)
+@jwt_required()
+def update_member_role(
+    workspace_id,
+    member_id
+):
+
+    current_user = get_jwt_identity()
+
+    role = member_repo.get_role(
+        workspace_id,
+        current_user
+    )
+
+    if role != "ADMIN":
+        return jsonify({
+            "error": "Only admins can update roles"
+        }), 403
+
+    data = request.get_json()
+
+    new_role = data.get("role")
+
+    if new_role not in [
+        "VIEWER",
+        "EDITOR",
+        "ADMIN"
+    ]:
+        return jsonify({
+            "error": "Invalid role"
+        }), 400
+
+    updated = member_repo.update_role(
+        workspace_id,
+        member_id,
+        new_role
+    )
+
+    if not updated:
+        return jsonify({
+            "error": "Member not found"
+        }), 404
+
+    return jsonify({
+        "message": "Role updated"
+    })
+
+#================= REMOVE MEMBER =================
+@workspace_bp.route(
+    "/workspaces/<workspace_id>/members/<member_id>",
+    methods=["DELETE"]
+)
+@jwt_required()
+def remove_member(
+    workspace_id,
+    member_id
+):
+
+    current_user = get_jwt_identity()
+
+    role = member_repo.get_role(
+        workspace_id,
+        current_user
+    )
+
+    if role != "ADMIN":
+        return jsonify({
+            "error": "Only admins can remove members"
+        }), 403
+
+    removed = member_repo.remove_member(
+        workspace_id,
+        member_id
+    )
+
+    if not removed:
+        return jsonify({
+            "error": "Member not found"
+        }), 404
+
+    return jsonify({
+        "message": "Member removed"
+    })
