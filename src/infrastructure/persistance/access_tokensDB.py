@@ -64,6 +64,24 @@ def revoke_token(raw_token: str) -> None:
             conn.commit()
     except Exception as e:
         raise RefreshTokenPersistenceError(f"Erro ao revogar refresh token: {e}")
+def revoke_all_user_tokens(user_id: str) -> None:
+        """
+        Revoga todos os tokens ativos do utilizador antes de emitir novos.
+        ARGS: user_id(str)
+        """
+        try:
+            with engine.connect() as conn:
+                conn.execute(
+                    refresh_token_table.update()
+                    .where(
+                        refresh_token_table.c.user_id == user_id,
+                        refresh_token_table.c.revoked == False
+                    )
+                    .values(revoked=True)
+                )
+                conn.commit()
+        except Exception as e:
+            raise RefreshTokenPersistenceError(f"Erro ao revogar sessões anteriores: {e}")
 
 def revoke_all_user_tokens(user_id: str) -> None:
     """Revoga todos os tokens do utilizador"""

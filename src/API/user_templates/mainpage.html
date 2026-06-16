@@ -2,27 +2,632 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-    <script>
-    const REFRESH_URL = "{{ url_for('users.refresh') }}";
-    const LOGIN_URL = "{{ url_for('users.user_login') }}";
-    </script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="{{ url_for('users.static', filename='js/api.js') }}"></script>
     <title>MarkDawn</title>
 </head>
 
 <body>
-    <h1>Bem vindo, <spanr id="userEmail"></span></h1>
+
+<h1>Bem vindo, <span id="userEmail"></span></h1>
+
+<button
+    class="btn btn-outline-danger float-end"
+    onclick="logout()">
+    Terminar Sessão
+</button>
+
+<div class="mt-3">
+    <input id="workspaceNameInput" class="form-control" placeholder="Nome do workspace">
+</div>
+
+<button class="btn btn-primary mt-2" onclick="createWorkspace()">
+    Criar Workspace
+</button>
+
+<h3 class="mt-4">Workspaces</h3>
+
+<ul id="workspaceList" class="list-group mt-2"></ul>
+
+<hr>
+
+<h3>Workspace Atual</h3>
+
+<p id="currentWorkspace">
+    Nenhum workspace selecionado
+</p>
+
+<hr>
+
+<h5>Membros do Workspace</h5>
+
+<input
+    id="memberUsername"
+    class="form-control mt-2"
+    placeholder="Username do utilizador">
+
+<select
+    id="memberRole"
+    class="form-select mt-2">
+
+    <option value="VIEWER">Viewer</option>
+    <option value="EDITOR">Editor</option>
+    <option value="ADMIN">Admin</option>
+
+</select>
+
+<button
+    class="btn btn-secondary mt-2"
+    onclick="addMember()">
+
+    Adicionar Membro
+
+</button>
+
+<ul
+    id="memberList"
+    class="list-group mt-3">
+
+</ul>
+
+<hr>
+
+
+<input
+    id="docTitle"
+    class="form-control mt-2"
+    placeholder="Título do documento">
+
+<textarea
+    id="docContent"
+    class="form-control mt-2"
+    rows="8"
+    placeholder="Conteúdo markdown">
+</textarea>
+
+<button
+    class="btn btn-success mt-2"
+    onclick="createDocument()">
+    Criar Documento
+</button>
+
+<button
+    id="saveDocumentButton"
+    class="btn btn-warning mt-2"
+    onclick="saveDocument()"
+    style="display:none;">
+    Guardar Alterações
+</button>
+
+<h4 class="mt-4">Documentos</h4>
+
+<ul id="documentList" class="list-group"></ul>
+
 </body>
 
 <script>
-    apiRequest("{{ url_for('users.get_current_user') }}")
+    let selectedWorkspaceId = null;
+    let currentDocumentId = null;
+    let currentRole = null;
+
+apiRequest("{{ url_for('users.get_current_user') }}")
+    .then(res => res.json())
+    .then(data => {
+        if (data?.logged_as) {
+            document.getElementById("userEmail").textContent = data.logged_as;
+        }
+    });
+
+function createWorkspace() {
+    const name = document.getElementById("workspaceNameInput").value;
+
+    if (!name) {
+        alert("Introduz um nome para o workspace");
+        return;
+    }
+
+    apiRequest("/workspaces/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name })
+    })
+    .then(res => res.json())
+    .then(() => {
+        document.getElementById("workspaceNameInput").value = "";
+        loadWorkspaces();
+    });
+}
+
+function deleteWorkspace(workspaceId) {
+
+    if (!confirm("Pretende eliminar este workspace?")) {
+        return;
+    }
+
+    apiRequest(`/workspaces/${workspaceId}`, {
+        method: "DELETE"
+    })
+    .then(res => res.json())
+    .then(() => {
+        loadWorkspaces();
+    });
+}
+
+function loadWorkspaces() {
+    apiRequest("/workspaces")
         .then(res => res.json())
         .then(data => {
-            if (data && data.logged_as) {
-                document.getElementById("userEmail").textContent = data.logged_as;
-            }
+
+            const list = document.getElementById("workspaceList");
+            list.innerHTML = "";
+
+            data.workspaces.forEach(ws => {
+
+                const li = document.createElement("li");
+                li.className = "list-group-item";
+
+                li.innerHTML = `
+                    <b>${ws.name}</b>
+                    <small class="d-block text-muted">${ws.created_at}</small>
+
+                    <button
+                        class="btn btn-primary btn-sm mt-2"
+                        onclick="openWorkspace('${ws.id}','${ws.name}')">
+                        Abrir
+                    </button>
+
+                    ${ws.role === "ADMIN" ? `
+                    <button
+                        class="btn btn-danger btn-sm mt-2"
+                        onclick="deleteWorkspace('${ws.id}')">
+                        Eliminar
+                    </button>
+                    ` : ""}
+                `;
+
+                list.appendChild(li);
+            });
+        });
+}
+
+function logout() {
+
+    apiRequest("/logout", {
+        method: "POST"
+    })
+    .then(res => res.json())
+    .then(data => {
+
+        window.location.href = data.redirect;
+
+    });
+}
+
+function openWorkspace(workspaceId, workspaceName) {
+
+    selectedWorkspaceId = workspaceId;
+
+    document.getElementById("currentWorkspace").innerText =
+        workspaceName;
+
+    loadRole();
+
+    loadDocuments();
+
+    loadMembers();
+
+}
+
+function createDocument() {
+
+    if (!selectedWorkspaceId) {
+        alert("Selecione um workspace");
+        return;
+    }
+
+    const title = document.getElementById("docTitle").value;
+    const content = document.getElementById("docContent").value;
+
+    apiRequest("/documents", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            workspace_id: selectedWorkspaceId,
+            title: title,
+            content: content
         })
-        .catch(err => console.error("Erro na autenticação:", err));
+    })
+    .then(res => res.json())
+    .then(() => {
+
+        document.getElementById("docTitle").value = "";
+        document.getElementById("docContent").value = "";
+
+        loadDocuments();
+    });
+}
+
+function loadDocuments() {
+
+    if (!selectedWorkspaceId) {
+        return;
+    }
+
+    apiRequest(`/documents/${selectedWorkspaceId}`)
+        .then(res => res.json())
+        .then(data => {
+
+            const list =
+                document.getElementById("documentList");
+
+            list.innerHTML = "";
+
+            data.documents.forEach(doc => {
+
+                const li =
+                    document.createElement("li");
+
+                li.className =
+                    "list-group-item";
+
+                li.innerHTML = `
+                    <b>${doc.title}</b>
+
+                    <small class="d-block text-muted">
+                        ${doc.created_at}
+                    </small>
+
+                    <br>
+
+                    <button
+                        class="btn btn-primary btn-sm mt-2"
+                        onclick="openDocument('${doc.id}')">
+                        Abrir Documento
+                    </button>
+
+                    <button
+                        class="btn btn-info btn-sm mt-2"
+                        onclick="viewDocument('${doc.id}')">
+                        Ver
+                    </button>
+
+                    <button
+                        class="btn btn-secondary btn-sm mt-2"
+                        onclick="exportDocument('${doc.id}')">
+                        Exportar
+                    </button>
+
+                    ${currentRole === "ADMIN" ? `
+                    <button
+                        class="btn btn-danger btn-sm mt-2"
+                        onclick="deleteDocument('${doc.id}')">
+                        Eliminar Documento
+                    </button>
+                    ` : ""}
+                `;
+
+                list.appendChild(li);
+            });
+        });
+}
+
+function openDocument(documentId) {
+
+    apiRequest(`/document/${documentId}`)
+        .then(res => res.json())
+        .then(doc => {
+
+            document.getElementById("docTitle").value =
+                doc.title;
+
+            document.getElementById("docContent").value =
+                doc.markdown_content;
+
+            currentDocumentId = doc.id;
+
+            document.getElementById(
+                "saveDocumentButton"
+            ).style.display = "inline-block";
+        });
+}
+
+function saveDocument() {
+
+    if (!currentDocumentId) {
+        alert("Nenhum documento selecionado");
+        return;
+    }
+
+    const title =
+        document.getElementById("docTitle").value;
+
+    const content =
+        document.getElementById("docContent").value;
+
+    apiRequest(`/document/${currentDocumentId}`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            title: title,
+            content: content
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+
+    alert("Documento atualizado com sucesso");
+
+    document.getElementById("docTitle").value = "";
+    document.getElementById("docContent").value = "";
+
+    currentDocumentId = null;
+
+    document.getElementById(
+        "saveDocumentButton"
+    ).style.display = "none";
+
+    loadDocuments();
+});
+}
+
+function deleteDocument(documentId) {
+
+    if (!confirm(
+        "Pretende eliminar este documento?"
+    )) {
+        return;
+    }
+
+    apiRequest(`/document/${documentId}`, {
+        method: "DELETE"
+    })
+    .then(res => res.json())
+    .then(() => {
+
+        document.getElementById("docTitle").value = "";
+        document.getElementById("docContent").value = "";
+
+        currentDocumentId = null;
+
+        document.getElementById(
+            "saveDocumentButton"
+        ).style.display = "none";
+
+        loadDocuments();
+    });
+}
+
+function exportDocument(documentId) {
+
+    window.location.href =
+        `/document/${documentId}/export`;
+
+}
+
+function addMember() {
+
+    if (!selectedWorkspaceId) {
+        alert("Selecione um workspace");
+        return;
+    }
+
+    const username =
+        document.getElementById(
+            "memberUsername"
+        ).value;
+
+    const role =
+        document.getElementById(
+            "memberRole"
+        ).value;
+
+    apiRequest(
+        `/workspaces/${selectedWorkspaceId}/members`,
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                username: username,
+                role: role
+            })
+        }
+    )
+    .then(res => res.json())
+    .then(data => {
+
+        alert("Membro adicionado");
+
+        document.getElementById(
+            "memberUsername"
+        ).value = "";
+
+        loadMembers();
+    });
+}
+
+function updateMemberRole(
+    memberId,
+    role
+) {
+
+    apiRequest(
+        `/workspaces/${selectedWorkspaceId}/members/${memberId}`,
+        {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                role: role
+            })
+        }
+    )
+    .then(res => res.json())
+    .then(() => {
+
+        alert("Role atualizada");
+
+        loadMembers();
+
+    });
+}
+
+function removeMember(memberId) {
+
+    if (!confirm(
+        "Pretende remover este membro?"
+    )) {
+        return;
+    }
+
+    apiRequest(
+        `/workspaces/${selectedWorkspaceId}/members/${memberId}`,
+        {
+            method: "DELETE"
+        }
+    )
+    .then(res => res.json())
+    .then(() => {
+
+        alert("Membro removido");
+
+        loadMembers();
+
+    });
+}
+
+function loadMembers() {
+
+    if (!selectedWorkspaceId) {
+        return;
+    }
+
+    apiRequest(
+        `/workspaces/${selectedWorkspaceId}/members`
+    )
+    .then(res => res.json())
+    .then(data => {
+
+        const list =
+            document.getElementById(
+                "memberList"
+            );
+
+        list.innerHTML = "";
+
+        data.members.forEach(member => {
+
+            const li =
+                document.createElement("li");
+
+            li.className =
+                "list-group-item";
+
+            li.innerHTML = `
+                <b>${member.username}</b>
+                - ${member.role}
+
+                ${currentRole === "ADMIN" ? `
+
+                <select
+                    onchange="updateMemberRole(
+                        '${member.id}',
+                        this.value
+                    )"
+                    class="form-select form-select-sm mt-2">
+
+                    <option value="VIEWER"
+                        ${member.role === "VIEWER" ? "selected" : ""}>
+                        Viewer
+                    </option>
+
+                    <option value="EDITOR"
+                        ${member.role === "EDITOR" ? "selected" : ""}>
+                        Editor
+                    </option>
+
+                    <option value="ADMIN"
+                        ${member.role === "ADMIN" ? "selected" : ""}>
+                        Admin
+                    </option>
+
+                </select>
+
+                <button
+                    class="btn btn-danger btn-sm mt-2"
+                    onclick="removeMember('${member.id}')">
+
+                    Remover
+
+                </button>
+
+                ` : ""}
+            `;
+
+            list.appendChild(li);
+        });
+    });
+}
+
+function loadRole() {
+
+    apiRequest(
+        `/workspaces/${selectedWorkspaceId}/role`
+    )
+    .then(res => res.json())
+    .then(data => {
+
+        currentRole = data.role;
+
+        applyPermissions();
+    });
+}
+
+function applyPermissions() {
+    const saveButton =
+    document.getElementById(
+        "saveDocumentButton"
+    );
+
+    const addMemberButton =
+        document.querySelector(
+            "button[onclick='addMember()']"
+        );
+
+    if (currentRole === "VIEWER") {
+
+        saveButton.style.display = "none";
+
+        addMemberButton.style.display = "none";
+    }
+
+    else if (currentRole === "EDITOR") {
+
+        addMemberButton.style.display = "none";
+    }
+
+    else if (currentRole === "ADMIN") {
+
+        addMemberButton.style.display =
+            "inline-block";
+    }
+
+    loadDocuments();
+    loadMembers();
+}
+
+function viewDocument(documentId) {
+    window.open(`/document/${documentId}/view`, "_blank");
+}
+
+document.addEventListener("DOMContentLoaded", loadWorkspaces);
 
 </script>
+
+</html>

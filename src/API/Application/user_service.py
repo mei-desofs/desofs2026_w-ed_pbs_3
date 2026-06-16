@@ -1,13 +1,17 @@
+import re
+
 from flask import Flask, jsonify, request
 import json
 from flask_jwt_extended import create_access_token, create_refresh_token
 from src.domain.user.entities import User
 from src.domain.user.value_objects import InvalidUserNameError, PasswordError
-from src.infrastructure.persistance.userDB import find_by_username, create_user, get_user_by_username, UserPersistanceError
-from src.infrastructure.persistance.access_tokensDB import save_refresh_token,revoke_token,find_valid_token, RefreshTokenPersistenceError
+from src.infrastructure.persistance.userDB import find_by_username, create_user, get_user_by_username,get_user_by_id,update_password,get_user_by_oauth, create_user_oauth, UserPersistanceError
+from src.infrastructure.persistance.access_tokensDB import revoke_all_user_tokens, save_refresh_token,revoke_token,find_valid_token, RefreshTokenPersistenceError
 from datetime import datetime, timedelta, timezone
 from src.domain.user.value_objects import HashedPassword
 import traceback
+import uuid
+from datetime import datetime, timezone, timedelta
 
 class AuthenticationError(Exception):
     pass
@@ -26,14 +30,21 @@ class UserService:
         user = get_user_by_username(username_str)
         if user is None:
             raise AuthenticationError("Username inválido")
+        
+        # Termina sessões anteriores do utilizador
+        
+        try:
+            revoke_all_user_tokens(str(user.id))
+        except RefreshTokenPersistenceError as e:
+            print(f"[WARN] Não foi possível revogar sessões anteriores: {e}")
 
         if not user._password_vo.matches(password_raw):
             raise AuthenticationError("Credenciais inválidas")
         
         user.password_vo.set_passw_to0s() # Limpa o hash da senha
 
-        a_token = create_access_token(identity=username_str)
-        r_token = create_refresh_token(identity=username_str)
+        a_token = create_access_token(identity=str(user.id))
+        r_token = create_refresh_token(identity=str(user.id))
 
         try:
             expires_at = datetime.now(timezone.utc) + timedelta(days=30) 
@@ -44,11 +55,59 @@ class UserService:
             )
         except RefreshTokenPersistenceError as e:
             print(f"[ERROR] Falha ao persistir refresh token para {username_str}: {e}")
-            raise Exception("Erro interno ao completar o login.")
+            
+            raise AuthenticationError("Serviço temporariamente indisponível. Tente mais tarde.")
+
+        return a_token, r_token
+    
+
+    def authenticate_oauth(self, oauth_provider: str, oauth_id: str, email_str: str) -> tuple[str, str]:
+        """
+        Autentica ou regista um utilizador via Provedor OAuth externo (Google).
+        Cumpre os requisitos ASVS 5.0 de provisionamento seguro.
+        """
+        if not oauth_id or not oauth_provider:
+            raise AuthenticationError("Dados de autenticação externa inválidos.")
+
+        # Tentar encontrar o utilizador pelo ID do Google 
+        user = get_user_by_oauth(oauth_provider, oauth_id)
+
+        # Se o utilizador não existir, regista via OAuth do domínio
+        if user is None:
+            # ASVS: Verificar se o username já está ocupado por uma conta local
+            sanitized_base = re.sub(r'[^a-zA-Z0-9_]', '_', email_str)
+            if find_by_username(sanitized_base):
+                username_final = f"{sanitized_base}_{str(uuid.uuid4())[:8]}"
+            else:
+                username_final = sanitized_base
+
+            user = User.create_oauth(username_str=username_final,oauth_provider=oauth_provider,oauth_id=oauth_id)
+            
+            # Persistência
+            create_user_oauth(user) 
+
+        try:
+            revoke_all_user_tokens(str(user.id))
+        except Exception as e:
+            print(f"[WARN] Não foi possível revogar sessões: {e}")
+
+        a_token = create_access_token(identity=str(user.id))
+        r_token = create_refresh_token(identity=str(user.id))
+
+        try:
+            expires_at = datetime.now(timezone.utc) + timedelta(days=30) 
+            save_refresh_token(
+                user_id=str(user.id),
+                raw_token=r_token,
+                expires_at=expires_at,
+            )
+        except Exception as e:
+            print(f"[ERROR] Falha ao persistir refresh token: {e}")
+            raise AuthenticationError("Serviço indisponível temporariamente.")
 
         return a_token, r_token
         
-    def refresh_atoken(self, username_str:str, raw_refresh_token:str) -> str:
+    def refresh_atoken(self, user_id:str, raw_refresh_token:str) -> str:
         """
         Atualiza o access token a JWT
         ARGS: username_str(str), raw_refresh_token(str)
@@ -57,7 +116,7 @@ class UserService:
         token_data = find_valid_token(raw_refresh_token)
         if not token_data:
             raise AuthenticationError("Refresh token inválido ou revogado.")
-        new_atoken = create_access_token(identity=username_str)
+        new_atoken = create_access_token(identity=user_id)
         return new_atoken
     
     def register_user(self, username_raw: str, password_raw: str):
@@ -82,7 +141,7 @@ class UserService:
                 create_user(new_user)
             except UserPersistanceError as e:
                 print(f"[ERROR] Falha na base de dados ao registar {username_val}: {e}")
-                raise Exception("Não foi possível persistir os dados do utilizador de momento.")
+                raise AuthenticationError("Serviço temporariamente indisponível. Tente mais tarde.")
             
             print(f"[LOG] Utilizador {username_val} registado com sucesso.")
 
@@ -91,12 +150,45 @@ class UserService:
             return new_user
 
         except (InvalidUserNameError, PasswordError) as e:
-        # Relança os erros de domínio para que o Controller
+        # raise dos erros de domínio para que o Controller
             raise e
         
         except Exception as e:
-            # Log centralizado do erro real para auditoria interna (Prevenção de fuga de informação)
             print(f"[CRITICAL ERROR] Falha inesperada no registo: {e}")
             print(traceback.format_exc())
 
             raise Exception("Ocorreu um erro interno no sistema.")
+        
+
+    def change_password(self, user_id:str, current_password:str, new_password:str):
+        """
+        Altera a password do utilizador
+        ARGS: user_id(str), current_password(str), new_password(str)
+        returns: None ou outputs de excessões
+        """
+        user = get_user_by_id(user_id)
+
+        if user is None:
+            raise AuthenticationError("Utilizador não encontrado.")
+        
+        if not user._password_vo.matches(current_password):
+            raise AuthenticationError("A password atual está incorreta.")
+        
+        try:
+                user._password_vo.set_password(new_password)
+                user._password_hash = user._password_vo._value
+                update_password(user) 
+                revoke_all_user_tokens(user_id)
+                print(f"[LOG] Password do utilizador alterada com sucesso.")
+
+        except PasswordError as e:
+                print(f"[WARN] Tentativa de definir uma nova password inválida: {e}")
+                raise e
+
+        except UserPersistanceError as e:
+                print(f"[ERROR] Falha na base de dados ao alterar password: {e}")
+                raise AuthenticationError("Serviço temporariamente indisponível. Tente mais tarde.")
+            
+        finally:
+                if user and hasattr(user, 'password_vo'):
+                    user.password_vo.set_passw_to0s()

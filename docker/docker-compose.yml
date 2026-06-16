@@ -28,6 +28,7 @@ services:
       DB_NAME: ${DB_NAME}
       WORKSPACE_URL: ${WORKSPACE_URL}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_AUD_KEY: ${JWT_AUD_KEY}
 
 
   # WORKSPACE SERVICE
@@ -51,6 +52,10 @@ services:
     depends_on:
       - db
 
+    environment:
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      WORKSPACE_SERVICE_TOKEN: ${WORKSPACE_SERVICE_TOKEN}
+
     # persistência de ficheiros dos utilizadores
     volumes:
       - workspace_data:/workspaces
@@ -69,8 +74,10 @@ services:
 
     # configuração inicial da base de dados
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
 
     # porta MySQL
     ports:

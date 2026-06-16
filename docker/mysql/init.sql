@@ -1,8 +1,15 @@
+REVOKE ALL PRIVILEGES ON *.* FROM 'markdawn_svc'@'%';
+GRANT SELECT, INSERT, UPDATE, DELETE ON markdawn.* TO 'markdawn_svc'@'%';
+FLUSH PRIVILEGES;
+
 CREATE TABLE users (
     id CHAR(36) PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    password_hash VARCHAR(255) NULL,
+    oauth_provider VARCHAR(20) NULL, -- Ex: 'google'
+    oauth_id VARCHAR(255) NULL,      -- ig google
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_oauth (oauth_provider, oauth_id)
 );
 
 

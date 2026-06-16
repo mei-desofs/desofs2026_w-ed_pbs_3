@@ -41,6 +41,14 @@ class HashedPassword:
         """Deve ser chamado para limpar o hash da password"""
         self._value = "0"*len(self._value)
 
+    def set_password(self, new_plain_password:str):
+        if len(new_plain_password) < 8:
+            raise LengthError("Password muito curta!")
+        if new_plain_password in self.COMMON_PASSWORDS:
+            raise RockError("Password demasiado comum.")
+        
+        self._value = generate_password_hash(new_plain_password, method='scrypt')
+
     @classmethod
     def create_from_plain_text(cls, plain_text: str):
         #Verifica Lenght
