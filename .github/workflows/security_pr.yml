@@ -142,7 +142,7 @@ jobs:
         run: |
           echo "Waiting for Flask API to be ready..."
           for i in {1..90}; do
-            if curl -s http://localhost:5003 > /dev/null 2>&1; then
+            if curl -k -s https://localhost:5003 > /dev/null 2>&1; then
               echo "API is up!"
               exit 0
             fi
@@ -159,23 +159,15 @@ jobs:
       - name: Check Flask API health
         run: |
           echo "Verifying Flask API is responding..."
-          curl -v http://localhost:5003 || true
+          curl -k -v https://localhost:5003 || true
           sleep 2
-
-      - name: Save container logs
-        if: always()
-        run: |
-          docker logs flask_api > reports/docker-web.log 2>&1 || true
-          docker logs mysql_db > reports/docker-mysql.log 2>&1 || true
-          docker logs workspace_server > reports/docker-workspace.log 2>&1 || true
-          docker compose -f docker/docker-compose.yml logs > reports/all-services.log 2>&1 || true
 
       - name: OWASP ZAP Baseline Scan
         if: success()
         uses: zaproxy/action-baseline@v0.12.0
         continue-on-error: true
         with:
-          target: "http://localhost:5003"
+          target: "https://localhost:5003"
           allow_issue_writing: false
           cmd_options: "-I"
           artifact_name: zap-report
