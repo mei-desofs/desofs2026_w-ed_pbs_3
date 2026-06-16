@@ -15,10 +15,14 @@ services:
     # expõe API na porta 5000
     ports:
       - "5003:5003"
+    networks:
+      - app_network
 
     depends_on:
       db:
         condition: service_healthy
+      redis: 
+        condition: service_started
 
     # variáveis de ambiente vindas do .env
     environment:
@@ -29,6 +33,7 @@ services:
       WORKSPACE_URL: ${WORKSPACE_URL}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       JWT_AUD_KEY: ${JWT_AUD_KEY}
+      REDIS_URL: "redis://redis:6379/0"
 
 
   # WORKSPACE SERVICE
@@ -56,6 +61,9 @@ services:
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       WORKSPACE_SERVICE_TOKEN: ${WORKSPACE_SERVICE_TOKEN}
 
+    networks:
+      - app_network
+
     # persistência de ficheiros dos utilizadores
     volumes:
       - workspace_data:/workspaces
@@ -82,6 +90,9 @@ services:
     # porta MySQL
     ports:
       - "3307:3306"
+
+    networks:
+      - app_network
 
     # persistência da base de dados + init script
     volumes:
@@ -114,9 +125,25 @@ services:
       - workspace_data:/workspaces
       - backup_data:/backups
 
+  #redis
+  redis:
+    image: redis:7-alpine
+    container_name: markdawn_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge
 
 # VOLUMES (dados persistentes)
 volumes:
   mysql_data:
   workspace_data:
   backup_data:
+  redis_data:

@@ -1,11 +1,12 @@
 from flask import Flask, jsonify, request, Blueprint, render_template, redirect, url_for
-from flask_jwt_extended import unset_access_cookies, jwt_required, get_jwt_identity, set_access_cookies, set_refresh_cookies, unset_refresh_cookies
+from flask_jwt_extended import get_jwt, unset_access_cookies, jwt_required, get_jwt_identity, set_access_cookies, set_refresh_cookies, unset_refresh_cookies
 from src.API.Application.user_service import UserService, AuthenticationError
 from src.domain.user.value_objects import InvalidUserNameError, LengthError, RockError, PasswordError
 from src.infrastructure.persistance.userDB import get_user_by_id
 import traceback
-from extensions import limiter, oauth
+from extensions import limiter, oauth, redis_client
 from authlib.integrations.flask_client import OAuth
+
 
 user_service = UserService()
 
@@ -145,15 +146,19 @@ def logout():
     """
     Termina a sessão do utilizador autenticado.
     """
+    jti = get_jwt()["jti"]
 
     resp = jsonify({
         "redirect": url_for("users.user_login")
     })
 
+    redis_client.setex(f"blacklist:{jti}", 3600, "true") 
+
+    resp = jsonify({"message": "Logout efetuado com sucesso"})
     unset_access_cookies(resp)
     unset_refresh_cookies(resp)
-
     return resp, 200
+
 
 @user_bp.route('/change_password', methods=['GET','POST'])
 @jwt_required()
