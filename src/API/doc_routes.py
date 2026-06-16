@@ -26,7 +26,8 @@ SERVICE_TOKEN = os.getenv("WORKSPACE_SERVICE_TOKEN")
 @jwt_required()
 def create_document():
 
-    MAX_DOC_SIZE = 100_000  # ~100 KB
+    MAX_DOC_SIZE = 100_000
+    MAX_DOCS_PER_USER = 50
 
     user_id = get_jwt_identity()
     data = request.get_json()
@@ -34,6 +35,16 @@ def create_document():
     workspace_id = data.get("workspace_id")
     title = data.get("title")
     content = data.get("content", "")
+
+    doc_count = repo.count_by_user(user_id)
+
+    if doc_count >= MAX_DOCS_PER_USER:
+        logger.warning(
+            f"event=doc_quota_exceeded | who={sanitize_log(user_id)} | count={doc_count}"
+        )
+        return jsonify({
+            "error": "Document limit reached"
+        }), 403
 
     # ================= VALIDATION =================
     if not workspace_id or not title:
@@ -43,6 +54,9 @@ def create_document():
         return jsonify({"error": "title too long"}), 400
 
     if len(content.encode("utf-8")) > MAX_DOC_SIZE:
+        logger.warning(
+            f"event=doc_rejected_size | who={sanitize_log(user_id)} | size={len(content.encode('utf-8'))}"
+        )
         return jsonify({"error": "document too large"}), 413
 
     logger.info(

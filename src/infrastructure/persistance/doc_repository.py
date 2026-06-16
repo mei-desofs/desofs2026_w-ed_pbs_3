@@ -171,3 +171,21 @@ class DocumentRepository:
 
         finally:
             db.close()
+
+    # ================= COUNT BY USER =================
+    def count_by_user(self, user_id: str) -> int:
+
+        db = SessionLocal()
+        try:
+            result = db.execute(text("""
+                SELECT COUNT(*)
+                FROM documents
+                WHERE created_by = :user_id
+            """), {
+                "user_id": user_id
+            })
+
+            return result.scalar() or 0
+
+        finally:
+            db.close()
