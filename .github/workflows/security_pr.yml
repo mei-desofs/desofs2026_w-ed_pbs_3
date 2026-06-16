@@ -77,34 +77,59 @@ jobs:
             > reports/safety-report.json \
             || true
 
+      - name: Create .env file
+        run: |
+          cat > docker/.env << EOF
+          DB_HOST=db
+          DB_USER=workspace_user
+          DB_PASSWORD=workspace_password
+          DB_NAME=workspace_db
+          MYSQL_ROOT_PASSWORD=root_password
+          WORKSPACE_URL=http://localhost:8000
+          JWT_SECRET_KEY=your-secret-key-here
+          JWT_AUD_KEY=your-aud-key-here
+          WORKSPACE_SERVICE_TOKEN=workspace-token
+          EOF
+
       - name: Start application
         run: |
           docker compose -f docker/docker-compose.yml up -d
-          sleep 90
+          sleep 15
 
-      - name: Wait for services to be healthy
+      - name: Wait for MySQL to be healthy
         run: |
-          for i in {1..120}; do
-            if docker compose -f docker/docker-compose.yml ps | grep -q "mysql.*healthy"; then
+          echo "Waiting for MySQL to be healthy..."
+          for i in {1..60}; do
+            if docker exec mysql_db mysqladmin ping -h localhost 2>/dev/null; then
               echo "MySQL is healthy!"
+              sleep 5
               break
             fi
-            echo "Attempt $i: Services not ready, waiting..."
+            echo "Attempt $i/60: MySQL not ready..."
             sleep 5
           done
+          
           docker compose -f docker/docker-compose.yml ps
+          if ! docker compose -f docker/docker-compose.yml ps | grep -q "mysql_db.*Up"; then
+            echo "ERROR: MySQL container is not running"
+            docker logs mysql_db
+            exit 1
+          fi
 
       - name: Wait for API
         run: |
+          echo "Waiting for Flask API to be ready..."
           for i in {1..60}; do
-            if curl -s https://localhost:5003 > /dev/null 2>&1 || curl -s http://localhost:5003 > /dev/null 2>&1; then
+            if curl -s http://localhost:5003 > /dev/null 2>&1; then
               echo "API is up!"
               exit 0
             fi
-            echo "Attempt $i: API not ready, waiting..."
+            echo "Attempt $i/60: API not ready, waiting..."
             sleep 5
           done
-          docker compose -f docker/docker-compose.yml logs > reports/docker-services.log 2>&1 || true
+          
+          echo "API failed to start after 5 minutes"
+          docker compose -f docker/docker-compose.yml logs > reports/docker-services.log 2>&1
           exit 1
 
       - name: Save container logs
@@ -117,7 +142,7 @@ jobs:
         uses: zaproxy/action-baseline@v0.12.0
         continue-on-error: true
         with:
-          target: "https://localhost:5003"
+          target: "http://localhost:5003"
           allow_issue_writing: false
           cmd_options: "-I"
           artifact_name: zap-report
