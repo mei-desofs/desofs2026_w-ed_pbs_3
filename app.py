@@ -15,8 +15,14 @@ import traceback
 import logging
 from extensions import limiter, oauth
 from src.infrastructure.persistance.userDB import (start_mappers,mapper_registry)
+from flask_cors import CORS
 
 app = Flask(__name__)
+
+CORS(app, supports_credentials=True, origins=[
+    "https://localhost:5003",
+    "http://localhost:5003"
+])
 
 limiter.init_app(app)
 oauth.init_app(app)
@@ -146,7 +152,25 @@ def set_security_headers(response):
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
 
+
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "base-uri 'none'; "
+        "object-src 'none'; "
+        "frame-ancestors 'none'; "
+        "img-src 'self' data:; "
+        "style-src 'self' https://cdn.jsdelivr.net; "
+        "script-src 'self' 'unsafe-inline'; "
+        "connect-src 'self' https://cdn.jsdelivr.net https://accounts.google.com https://*.google.com; "
+        "font-src 'self' https://cdn.jsdelivr.net; "
+    )
+
     return response
+
 
 if __name__ == "__main__":
     app.run(debug=True, host = "0.0.0.0", port = "5003", ssl_context=create_ssl_context())

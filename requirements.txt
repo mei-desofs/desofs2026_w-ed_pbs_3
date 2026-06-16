@@ -41,3 +41,4 @@ Markdown==3.10.2
 greenlet==3.5.0
 colorama==0.4.6
 bleach==6.4.0
+flask-cors==6.0.5
