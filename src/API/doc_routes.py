@@ -2,7 +2,7 @@ import uuid
 import requests
 import os
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, send_file, Response
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from src.infrastructure.persistance.doc_repository import DocumentRepository
@@ -245,3 +245,59 @@ def delete_document(doc_id):
     return jsonify({
         "message": "Documento eliminado"
     }), 200
+
+
+# ================= EXPORT DOCUMENT =================
+@doc_bp.route(
+    "/document/<doc_id>/export",
+    methods=["GET"]
+)
+@jwt_required()
+def export_document(doc_id):
+
+    user_id = get_jwt_identity()
+
+    document = repo.get_by_id(doc_id)
+
+    if not document:
+        return jsonify({
+            "error": "Documento não encontrado"
+        }), 404
+
+    role = workspace_member_repo.get_role(
+        document["workspace_id"],
+        user_id
+    )
+
+    if not role:
+        return jsonify({
+            "error": "access denied"
+        }), 403
+
+    r = requests.post(
+        f"{WORKSPACE_URL}/read-document",
+        json={
+            "user_id": document["created_by"],
+            "workspace_id": document["workspace_id"],
+            "doc_id": doc_id
+        },
+        headers={
+            "X-Service-Token": SERVICE_TOKEN
+        }
+    )
+
+    if r.status_code != 200:
+        return jsonify({
+            "error": "read failed"
+        }), 500
+
+    markdown = r.json()["content"]
+
+    return Response(
+        markdown,
+        mimetype="text/markdown",
+        headers={
+            "Content-Disposition":
+            f"attachment; filename={document['title']}.md"
+        }
+    )

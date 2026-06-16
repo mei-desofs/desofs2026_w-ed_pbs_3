@@ -98,3 +98,36 @@ def write_document():
     file_path.write_text(content, encoding="utf-8")
 
     return jsonify({"message": "written"})
+
+
+# ================= READ DOCUMENT =================
+@bp.route("/read-document", methods=["POST"])
+def read_document():
+
+    if not verify_internal_request():
+        return jsonify({"error": "unauthorized"}), 401
+
+    data = request.json
+
+    user_id = str(data["user_id"])
+    workspace_id = str(data["workspace_id"])
+    doc_id = str(data["doc_id"])
+
+    file_path = (
+        BASE_DIR / user_id / workspace_id /
+        "documents" / f"{doc_id}.md"
+    ).resolve()
+
+    if not str(file_path).startswith(str(BASE_DIR)):
+        return jsonify({"error": "invalid path"}), 400
+
+    if not file_path.exists():
+        return jsonify({"error": "document not found"}), 404
+
+    content = file_path.read_text(
+        encoding="utf-8"
+    )
+
+    return jsonify({
+        "content": content
+    })

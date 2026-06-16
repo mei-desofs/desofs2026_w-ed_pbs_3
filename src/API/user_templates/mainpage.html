@@ -286,6 +286,12 @@ function loadDocuments() {
                         Abrir Documento
                     </button>
 
+                    <button
+                        class="btn btn-secondary btn-sm mt-2"
+                        onclick="exportDocument('${doc.id}')">
+                        Exportar
+                    </button>
+
                     ${currentRole === "ADMIN" ? `
                     <button
                         class="btn btn-danger btn-sm mt-2"
@@ -386,6 +392,13 @@ function deleteDocument(documentId) {
 
         loadDocuments();
     });
+}
+
+function exportDocument(documentId) {
+
+    window.location.href =
+        `/document/${documentId}/export`;
+
 }
 
 function addMember() {
