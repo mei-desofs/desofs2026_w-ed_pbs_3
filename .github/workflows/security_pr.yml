@@ -94,7 +94,7 @@ jobs:
       - name: Start application
         run: |
           docker compose -f docker/docker-compose.yml up -d
-          sleep 15
+          sleep 30
 
       - name: Wait for MySQL to be healthy
         run: |
@@ -106,6 +106,7 @@ jobs:
               break
             fi
             echo "Attempt $i/60: MySQL not ready..."
+            docker compose -f docker/docker-compose.yml logs db | tail -10
             sleep 5
           done
           
@@ -116,29 +117,49 @@ jobs:
             exit 1
           fi
 
+      - name: Initialize database schema
+        run: |
+          echo "Initializing database schema..."
+          docker compose -f docker/docker-compose.yml exec -T db mysql -h localhost -uroot -p${MYSQL_ROOT_PASSWORD} ${DB_NAME} < docker/mysql/init.sql || true
+          sleep 5
+        env:
+          MYSQL_ROOT_PASSWORD: root_password
+          DB_NAME: workspace_db
+
       - name: Wait for API
         run: |
           echo "Waiting for Flask API to be ready..."
-          for i in {1..60}; do
+          for i in {1..90}; do
             if curl -s http://localhost:5003 > /dev/null 2>&1; then
               echo "API is up!"
               exit 0
             fi
-            echo "Attempt $i/60: API not ready, waiting..."
+            echo "Attempt $i/90: API not ready, waiting..."
+            docker compose -f docker/docker-compose.yml logs web 2>&1 | tail -20
             sleep 5
           done
           
-          echo "API failed to start after 5 minutes"
+          echo "API failed to start after 7.5 minutes"
           docker compose -f docker/docker-compose.yml logs > reports/docker-services.log 2>&1
+          docker logs flask_api > reports/docker-web.log 2>&1 || true
           exit 1
+
+      - name: Check Flask API health
+        run: |
+          echo "Verifying Flask API is responding..."
+          curl -v http://localhost:5003 || true
+          sleep 2
 
       - name: Save container logs
         if: always()
         run: |
           docker logs flask_api > reports/docker-web.log 2>&1 || true
           docker logs mysql_db > reports/docker-mysql.log 2>&1 || true
+          docker logs workspace_server > reports/docker-workspace.log 2>&1 || true
+          docker compose -f docker/docker-compose.yml logs > reports/all-services.log 2>&1 || true
 
       - name: OWASP ZAP Baseline Scan
+        if: success()
         uses: zaproxy/action-baseline@v0.12.0
         continue-on-error: true
         with:
@@ -153,8 +174,10 @@ jobs:
         with:
           name: security-reports
           path: reports/
+          retention-days: 30
 
       - name: Stop containers
         if: always()
         run: |
           docker compose -f docker/docker-compose.yml down -v
+          docker system prune -f
