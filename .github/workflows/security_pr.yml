@@ -77,6 +77,18 @@ jobs:
             > reports/safety-report.json \
             || true
 
+      - name: Run tests
+        env:
+          DB_USER: test
+          DB_PASSWORD: test
+          DB_HOST: localhost
+          DB_NAME: test
+          JWT_SECRET_KEY: test-secret-key
+          JWT_AUD_KEY: test-aud
+          WORKSPACE_SERVICE_TOKEN: test-token
+        run: |
+          PYTHONPATH=. pytest tests/ -v --tb=short
+
       - name: Create .env file
         run: |
           cat > docker/.env << EOF
