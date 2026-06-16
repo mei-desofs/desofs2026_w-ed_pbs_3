@@ -90,30 +90,35 @@ jobs:
       # DAST (OWASP ZAP)
       - name: Create .env file
         run: |
-          echo "DB_HOST=${{ secrets.DB_HOST }}" >> docker/.env
-          echo "DB_USER=${{ secrets.DB_USER }}" >> docker/.env
-          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> docker/.env
-          echo "DB_NAME=${{ secrets.DB_NAME }}" >> docker/.env
-          echo "WORKSPACE_URL=${{ secrets.WORKSPACE_URL }}" >> docker/.env
-          echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" >> docker/.env
+          mkdir -p docker
+          cat > docker/.env << EOF
+          DB_HOST=${{ secrets.DB_HOST }}
+          DB_USER=${{ secrets.DB_USER }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          DB_NAME=${{ secrets.DB_NAME }}
+          WORKSPACE_URL=${{ secrets.WORKSPACE_URL }}
+          JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
+          EOF
 
       - name: Start application
         run: |
           docker compose -f docker/docker-compose.yml up -d
+          sleep 10  # Give services time to initialize
 
       - name: Wait for API
         run: |
           echo "Waiting for API..."
 
-          for i in {1..30}; do
-            if curl -s http://localhost:5003 > /dev/null; then
+          for i in {1..60}; do
+            if curl -s https://localhost:5003 > /dev/null; then
               echo "API is up!"
               exit 0
             fi
+            echo "Attempt $i: API not ready, waiting..."
             sleep 5
           done
 
-          echo "API failed to start"
+          echo "API failed to start after 5 minutes"
           docker logs flask_api > reports/docker-web.log 2>&1 || true
           exit 1
 
@@ -126,7 +131,7 @@ jobs:
         uses: zaproxy/action-baseline@v0.12.0
         continue-on-error: true
         with:
-          target: "http://localhost:5003"
+          target: "https://localhost:5003"
           allow_issue_writing: false
           cmd_options: "-I"
           artifact_name: zap-report
