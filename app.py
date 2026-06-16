@@ -13,7 +13,7 @@ from src.API.doc_routes import doc_bp
 import ssl
 import traceback
 import logging
-from extensions import limiter, oauth, redis_client
+from extensions import limiter, oauth
 from src.infrastructure.persistance.userDB import (start_mappers,mapper_registry)
 
 app = Flask(__name__)
@@ -57,11 +57,6 @@ jwt = JWTManager(app)
 def unauthorized_callback(reason):
     return redirect(url_for("users.user_login"))
 
-@jwt.token_in_blocklist_loader
-def check_if_token_revoked(jwt_header, jwt_payload):
-    jti = jwt_payload["jti"]
-    token_in_redis = redis_client.get(f"blacklist:{jti}")
-    return token_in_redis is not None
 
 
 def create_ssl_context():

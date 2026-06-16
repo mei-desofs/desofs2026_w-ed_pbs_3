@@ -1,7 +1,7 @@
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from authlib.integrations.flask_client import OAuth
-import redis
+
 limiter = Limiter(get_remote_address)
 oauth = OAuth()
 
@@ -14,10 +14,3 @@ google = oauth.register(
     }
 )
 
-#redis client
-redis_client = redis.Redis(
-    host='redis',         
-    port=6379,            
-    db=0,                  
-    decode_responses=True  
-)
