@@ -88,27 +88,31 @@ jobs:
             || true
 
       # DAST (OWASP ZAP)
-      - name: Create .env file
-        run: |
-          mkdir -p docker
-          cat > docker/.env << EOF
-          DB_HOST=${{ secrets.DB_HOST }}
-          DB_USER=${{ secrets.DB_USER }}
-          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-          DB_NAME=${{ secrets.DB_NAME }}
-          WORKSPACE_URL=${{ secrets.WORKSPACE_URL }}
-          JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
-          EOF
-
       - name: Start application
         run: |
           docker compose -f docker/docker-compose.yml up -d
-          sleep 10  # Give services time to initialize
+          sleep 30  # Increased from 10 to 30 seconds for MySQL initialization
+
+      - name: Wait for services to be healthy
+        run: |
+          echo "Waiting for services to be healthy..."
+          
+          for i in {1..60}; do
+            if docker compose -f docker/docker-compose.yml ps | grep -q "mysql.*healthy"; then
+              echo "MySQL is healthy!"
+              break
+            fi
+            echo "Attempt $i: Services not ready, waiting..."
+            sleep 5
+          done
+          
+          # Show service status for debugging
+          docker compose -f docker/docker-compose.yml ps
 
       - name: Wait for API
         run: |
           echo "Waiting for API..."
-
+          
           for i in {1..60}; do
             if curl -s https://localhost:5003 > /dev/null; then
               echo "API is up!"
@@ -117,9 +121,9 @@ jobs:
             echo "Attempt $i: API not ready, waiting..."
             sleep 5
           done
-
+          
           echo "API failed to start after 5 minutes"
-          docker logs flask_api > reports/docker-web.log 2>&1 || true
+          docker compose -f docker/docker-compose.yml logs > reports/docker-services.log 2>&1 || true
           exit 1
 
       - name: Save container logs
