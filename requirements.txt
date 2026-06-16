@@ -36,3 +36,8 @@ typing_extensions==4.15.0
 urllib3==2.7.0
 Werkzeug==3.1.8
 wrapt==2.2.1
+webencodings==0.5.1
+Markdown==3.10.2
+greenlet==3.5.0
+colorama==0.4.6
+bleach==6.4.0

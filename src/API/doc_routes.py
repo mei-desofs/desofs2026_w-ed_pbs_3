@@ -3,8 +3,9 @@ import requests
 import os
 import re
 from urllib.parse import quote
+from markupsafe import escape
 
-from flask import Blueprint, request, jsonify, send_file, Response
+from flask import Blueprint, render_template, request, jsonify, send_file, Response
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from src.infrastructure.persistance.doc_repository import DocumentRepository
@@ -13,6 +14,8 @@ from src.infrastructure.persistance.workspace_member_repository import Workspace
 
 from src.infrastructure.logging.logger_config import logger, sanitize_log
 from src.domain.workspace.workspace_name import sanitize_filename
+
+from src.infrastructure.security.markdown_sanitizer import render_safe_markdown
 
 doc_bp = Blueprint("documents", __name__)
 
@@ -361,4 +364,72 @@ def export_document(doc_id):
             "Content-Disposition":
             f"attachment; filename*=UTF-8''{quote(safe_filename)}.md"
         }
+    )
+
+MAX_TITLE_LEN = 200
+
+# ================= VIEW DOCUMENT =================
+@doc_bp.route("/document/<doc_id>/view", methods=["GET"])
+@jwt_required()
+def view_document(doc_id):
+
+    user_id = get_jwt_identity()
+
+    logger.info(
+        f"event=doc_view_attempt | who={sanitize_log(user_id)} | doc_id={sanitize_log(doc_id)}"
+    )
+
+    document = repo.get_by_id(doc_id)
+
+    if not document:
+        logger.warning(
+            f"event=doc_view_not_found | who={sanitize_log(user_id)} | doc_id={sanitize_log(doc_id)}"
+        )
+        return jsonify({"error": "not found"}), 404
+
+    role = workspace_member_repo.get_role(
+        document["workspace_id"],
+        user_id
+    )
+
+    if not role:
+        logger.warning(
+            f"event=doc_view_access_denied | who={sanitize_log(user_id)} | workspace_id={sanitize_log(document['workspace_id'])} | doc_id={sanitize_log(doc_id)}"
+        )
+        return jsonify({"error": "access denied"}), 403
+
+    r = requests.post(
+        f"{WORKSPACE_URL}/read-document",
+        json={
+            "user_id": document["created_by"],
+            "workspace_id": document["workspace_id"],
+            "doc_id": doc_id
+        },
+        headers={"X-Service-Token": SERVICE_TOKEN},
+        timeout=5  # V1.3.3 / V2-ish hardening (DoS protection)
+    )
+
+    if r.status_code != 200:
+        logger.error(
+            f"event=doc_view_read_failed | who={sanitize_log(user_id)} | doc_id={sanitize_log(doc_id)} | status={r.status_code}"
+        )
+        return jsonify({"error": "read failed"}), 500
+
+    markdown = (r.json().get("content") or "").strip()
+
+    try:
+        html_content = render_safe_markdown(markdown)
+    except Exception as e:
+        logger.error(
+            f"event=doc_view_render_failed | who={sanitize_log(user_id)} | doc_id={sanitize_log(doc_id)} | error={str(e)}"
+        )
+        return jsonify({"error": "render failed"}), 500
+
+    # V1.2.1 + V1.3.3 output encoding hardening
+    safe_title = escape(document.get("title", "")[:MAX_TITLE_LEN])
+
+    return render_template(
+        "view_document.html",
+        title=safe_title,
+        content=html_content
     )

@@ -210,11 +210,12 @@ function openWorkspace(workspaceId, workspaceName) {
     document.getElementById("currentWorkspace").innerText =
         workspaceName;
 
+    loadRole();
+
     loadDocuments();
 
     loadMembers();
 
-    loadRole();
 }
 
 function createDocument() {
@@ -284,6 +285,12 @@ function loadDocuments() {
                         class="btn btn-primary btn-sm mt-2"
                         onclick="openDocument('${doc.id}')">
                         Abrir Documento
+                    </button>
+
+                    <button
+                        class="btn btn-info btn-sm mt-2"
+                        onclick="viewDocument('${doc.id}')">
+                        Ver
                     </button>
 
                     <button
@@ -610,6 +617,13 @@ function applyPermissions() {
         addMemberButton.style.display =
             "inline-block";
     }
+
+    loadDocuments();
+    loadMembers();
+}
+
+function viewDocument(documentId) {
+    window.open(`/document/${documentId}/view`, "_blank");
 }
 
 document.addEventListener("DOMContentLoaded", loadWorkspaces);
