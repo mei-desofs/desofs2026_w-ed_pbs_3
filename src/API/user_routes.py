@@ -11,7 +11,7 @@ user_service = UserService()
 
 user_bp = Blueprint("users",__name__, template_folder='./user_templates', static_folder='./user_templates')
 @user_bp.route('/', methods = ['POST', 'GET'])
-@limiter.limit("5 per minute")
+@limiter.limit("5 per 15 minutes")
 def user_login():
     if request.method == 'GET':
         return render_template('/login.html')
