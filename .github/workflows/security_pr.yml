@@ -6,38 +6,45 @@ on:
       - main
 
 jobs:
-
   security-scan:
     runs-on: ubuntu-latest
 
-    steps:
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: test_db
+          MYSQL_USER: test_user
+          MYSQL_PASSWORD: test_pass
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=5s
+          --health-timeout=10s
+          --health-retries=15
+          --health-start-period=60s
 
-      # 1. Checkout
+    steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Setup Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      # 3. Create reports folder
       - name: Create reports folder
         run: mkdir -p reports
 
-      # 4. Install dependencies
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # 5. Install security tools
       - name: Install security tools
         run: |
           pip install bandit semgrep pip-audit safety
 
-      # GITLEAKS (Secrets Scan)
       - name: Install Gitleaks
         run: |
           GITLEAKS_VERSION=8.18.0
@@ -53,7 +60,6 @@ jobs:
             --report-path reports/gitleaks-report.json \
             --exit-code 0 || true
 
-      # SAST
       - name: Run Bandit
         run: |
           bandit -r . \
@@ -70,7 +76,6 @@ jobs:
             . \
             || true
 
-      # SCA
       - name: Run pip-audit
         run: |
           pip-audit \
@@ -87,17 +92,14 @@ jobs:
             > reports/safety-report.json \
             || true
 
-      # DAST (OWASP ZAP)
       - name: Start application
         run: |
           docker compose -f docker/docker-compose.yml up -d
-          sleep 30  # Increased from 10 to 30 seconds for MySQL initialization
+          sleep 90
 
       - name: Wait for services to be healthy
         run: |
-          echo "Waiting for services to be healthy..."
-          
-          for i in {1..60}; do
+          for i in {1..120}; do
             if docker compose -f docker/docker-compose.yml ps | grep -q "mysql.*healthy"; then
               echo "MySQL is healthy!"
               break
@@ -105,24 +107,18 @@ jobs:
             echo "Attempt $i: Services not ready, waiting..."
             sleep 5
           done
-          
-          # Show service status for debugging
           docker compose -f docker/docker-compose.yml ps
 
       - name: Wait for API
         run: |
-          echo "Waiting for API..."
-          
           for i in {1..60}; do
-            if curl -s https://localhost:5003 > /dev/null; then
+            if curl -s https://localhost:5003 > /dev/null 2>&1 || curl -s http://localhost:5003 > /dev/null 2>&1; then
               echo "API is up!"
               exit 0
             fi
             echo "Attempt $i: API not ready, waiting..."
             sleep 5
           done
-          
-          echo "API failed to start after 5 minutes"
           docker compose -f docker/docker-compose.yml logs > reports/docker-services.log 2>&1 || true
           exit 1
 
@@ -130,6 +126,7 @@ jobs:
         if: always()
         run: |
           docker logs flask_api > reports/docker-web.log 2>&1 || true
+          docker logs mysql_db > reports/docker-mysql.log 2>&1 || true
 
       - name: OWASP ZAP Baseline Scan
         uses: zaproxy/action-baseline@v0.12.0
@@ -140,7 +137,6 @@ jobs:
           cmd_options: "-I"
           artifact_name: zap-report
 
-      # UPLOAD ALL REPORTS
       - name: Upload Security Reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -148,7 +144,6 @@ jobs:
           name: security-reports
           path: reports/
 
-      # CLEANUP
       - name: Stop containers
         if: always()
         run: |
