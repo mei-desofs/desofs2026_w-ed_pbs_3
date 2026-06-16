@@ -4,9 +4,9 @@ from src.API.Application.user_service import UserService, AuthenticationError
 from src.domain.user.value_objects import InvalidUserNameError, LengthError, RockError, PasswordError
 from src.infrastructure.persistance.userDB import get_user_by_id
 import traceback
-from extensions import limiter, oauth, redis_client
+from extensions import limiter, oauth, redis
 from authlib.integrations.flask_client import OAuth
-
+from extensions import redis_client
 
 user_service = UserService()
 
