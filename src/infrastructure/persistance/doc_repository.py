@@ -60,7 +60,7 @@ class DocumentRepository:
                 {
                     "id": r[0],
                     "title": r[1],
-                    "created_at": r[2].format() if r[2] else None
+                    "created_at": r[2].isoformat() if r[2] else None
                 }
                 for r in rows
             ]
@@ -100,7 +100,7 @@ class DocumentRepository:
                 "markdown_content": row[3],
                 "file_path": row[4],
                 "created_by": row[5],
-                "created_at": row[6].format() if row[6] else None
+                "created_at": row[6].isoformat() if row[6] else None
             }
 
         finally:

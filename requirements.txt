@@ -30,7 +30,6 @@ pyOpenSSL==26.2.0
 pytest==9.0.3
 python-dotenv==1.2.2
 python-env==1.0.0
-redis==8.0.0
 requests==2.34.2
 SQLAlchemy==2.0.49
 typing_extensions==4.15.0

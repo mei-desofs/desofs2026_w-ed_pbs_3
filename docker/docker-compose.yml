@@ -20,7 +20,6 @@ services:
       db:
         condition: service_healthy
 
-
     # variáveis de ambiente vindas do .env
     environment:
       DB_HOST: ${DB_HOST}

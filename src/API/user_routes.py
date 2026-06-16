@@ -5,7 +5,8 @@ from src.domain.user.value_objects import InvalidUserNameError, LengthError, Roc
 from src.infrastructure.persistance.userDB import get_user_by_id
 from src.infrastructure.logging.logger_config import (
     logger,
-    sanitize_log)
+    sanitize_log
+)
 import traceback
 from extensions import limiter, oauth
 from authlib.integrations.flask_client import OAuth
