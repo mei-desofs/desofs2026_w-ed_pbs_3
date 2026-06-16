@@ -137,12 +137,7 @@ class WorkspaceMemberRepository:
         finally:
             db.close()
 
-def update_role(
-    self,
-    workspace_id: str,
-    user_id: str,
-    role: str
-):
+def update_role(self, workspace_id: str, user_id: str, role: str):
 
     db = SessionLocal()
 

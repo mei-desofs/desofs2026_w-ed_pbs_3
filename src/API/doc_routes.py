@@ -73,6 +73,16 @@ def create_document():
 
     if not workspace:
         return jsonify({"error": "workspace not found"}), 404
+    
+    role = workspace_member_repo.get_role(workspace_id, user_id)
+
+    if role != "ADMIN":
+        logger.warning(
+            f"event=doc_create_denied | who={sanitize_log(user_id)} | workspace_id={sanitize_log(workspace_id)} | role={sanitize_log(role)}"
+        )
+        return jsonify({
+            "error": "permission denied"
+        }), 403
 
     doc_id = str(uuid.uuid4())
 
