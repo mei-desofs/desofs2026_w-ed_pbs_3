@@ -3,6 +3,10 @@ from flask_jwt_extended import unset_access_cookies, jwt_required, get_jwt_ident
 from src.API.Application.user_service import UserService, AuthenticationError
 from src.domain.user.value_objects import InvalidUserNameError, LengthError, RockError, PasswordError
 from src.infrastructure.persistance.userDB import get_user_by_id
+from src.infrastructure.logging.logger_config import (
+    logger,
+    sanitize_log
+)
 import traceback
 from extensions import limiter, oauth
 from authlib.integrations.flask_client import OAuth
@@ -23,9 +27,16 @@ def user_login():
         a_token, r_token = user_service.authenticate(data['email'], data['password'])
         set_access_cookies (resp, a_token)
         set_refresh_cookies (resp, r_token)
+
+        logger.info(
+            f"event=login_success | username={sanitize_log(data['email'])}"
+        )
     
         return resp
     except AuthenticationError:
+        logger.warning(
+            f"event=login_failure | username={sanitize_log(data['email'])}"
+        )
         return jsonify({"error": "Credenciais inválidas"}), 401
 
 #Rota que o utilizador usa para login google
@@ -50,7 +61,9 @@ def google_callback():
         #utenticar ou criar o utilizador via OAuth
         a_token, r_token = user_service.authenticate_oauth(oauth_provider='google', oauth_id=google_id,  email_str=email)
 
-       
+        logger.info(
+            f"event=oauth_login_success | provider=google | email={sanitize_log(email)}"
+        )
         resp = redirect(url_for("users.mainpage"))
         set_access_cookies(resp, a_token)
         set_refresh_cookies(resp, r_token)
@@ -58,8 +71,14 @@ def google_callback():
         return resp
 
     except AuthenticationError as e:
+        logger.warning(
+            "event=oauth_login_failed | provider=google"
+        )
         return jsonify({"error": str(e)}), 401
     except Exception as e:
+        logger.error(
+            f"event=oauth_login_error | error={sanitize_log(str(e))}"
+        )
         return jsonify({"error": "Falha na autenticação externa."}), 500
 
 @user_bp.route('/regist', methods=['POST', 'GET'])
@@ -108,6 +127,10 @@ def refresh():
     resp = jsonify({"msg": "token refreshed"})
     set_access_cookies(resp, new_atoken, max_age=900)
 
+    logger.info(
+        f"event=token_refreshed | user={sanitize_log(identity)}"
+    )
+
     return resp
     
 @user_bp.route('/mainpage', methods = ['GET'])
@@ -152,6 +175,10 @@ def logout():
 
     unset_access_cookies(resp)
     unset_refresh_cookies(resp)
+
+    logger.info(
+        f"event=logout | user={sanitize_log(get_jwt_identity())}"
+    )
 
     return resp, 200
 
