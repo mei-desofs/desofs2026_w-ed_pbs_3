@@ -15,8 +15,9 @@ google = oauth.register(
 )
 
 #redis client
-limiter = Limiter(
-    key_func=get_remote_address,
-    storage_uri="redis://redis:6379/0",
-    strategy="fixed-window"
+redis_client = redis.Redis(
+    host='redis',         
+    port=6379,            
+    db=0,                  
+    decode_responses=True  
 )
