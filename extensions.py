@@ -1,6 +1,7 @@
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from authlib.integrations.flask_client import OAuth
+
 limiter = Limiter(get_remote_address)
 oauth = OAuth()
 
@@ -12,3 +13,4 @@ google = oauth.register(
         'scope': 'openid email profile'
     }
 )
+
