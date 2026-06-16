@@ -148,6 +148,9 @@ def get_document(doc_id):
     document = repo.get_by_id(doc_id)
 
     if document is None:
+        logger.info(
+            f"event=get_doc_error_none | who={sanitize_log(user_id)} | doc_id={doc_id}"
+        )
         return jsonify({
             "error": "Documento não encontrado"
         }), 404
@@ -159,6 +162,9 @@ def get_document(doc_id):
     )
 
     if not role:
+        logger.info(
+            f"event=doc_read_access_denied | who={sanitize_log(user_id)} | doc_id={doc_id}"
+        )
         return jsonify({
             "error": "access denied"
         }), 403
@@ -182,6 +188,9 @@ def update_document(doc_id):
     document = repo.get_by_id(doc_id)
 
     if not document:
+        logger.info(
+            f"event=doc_not_found | who={sanitize_log(user_id)} | doc_id={doc_id}"
+        )
         return jsonify({
             "error": "Documento não encontrado"
         }), 404
@@ -192,6 +201,9 @@ def update_document(doc_id):
     )
 
     if role not in ["EDITOR", "ADMIN"]:
+        logger.info(
+            f"event=doc_role_denied | who={sanitize_log(user_id)} | doc_id={doc_id}"
+        )
         return jsonify({
             "error": "permission denied"
         }), 403
@@ -209,6 +221,9 @@ def update_document(doc_id):
 
 
     if not updated:
+        logger.info(
+            f"event=doc_role_not_found | who={sanitize_log(user_id)} | doc_id={doc_id}"
+        )
         return jsonify({
             "error": "Documento não encontrado"
         }), 404
@@ -232,6 +247,9 @@ def delete_document(doc_id):
     document = repo.get_by_id(doc_id)
 
     if not document:
+        logger.info(
+            f"event=doc_not_found | who={sanitize_log(user_id)} | doc_id={doc_id}"
+        )
         return jsonify({
             "error": "Documento não encontrado"
         }), 404
@@ -242,6 +260,9 @@ def delete_document(doc_id):
     )
 
     if role != "ADMIN":
+        logger.info(
+            f"event=doc_role_denied | who={sanitize_log(user_id)} | doc_id={doc_id}"
+        )
         return jsonify({
             "error": "permission denied"
         }), 403
@@ -251,6 +272,9 @@ def delete_document(doc_id):
     )
 
     if not deleted:
+        logger.info(
+            f"event=doc_not_found | who={sanitize_log(user_id)} | doc_id={doc_id}"
+        )
         return jsonify({
             "error": "Documento não encontrado"
         }), 404
@@ -265,10 +289,7 @@ def delete_document(doc_id):
 
 
 # ================= EXPORT DOCUMENT =================
-@doc_bp.route(
-    "/document/<doc_id>/export",
-    methods=["GET"]
-)
+@doc_bp.route("/document/<doc_id>/export", methods=["GET"])
 @jwt_required()
 def export_document(doc_id):
 
@@ -276,7 +297,14 @@ def export_document(doc_id):
 
     document = repo.get_by_id(doc_id)
 
+    logger.info(
+        f"event=doc_export_attempt | who={sanitize_log(user_id)} | doc_id={sanitize_log(doc_id)}"
+    )
+
     if not document:
+        logger.warning(
+            f"event=doc_export_not_found | who={sanitize_log(user_id)} | doc_id={sanitize_log(doc_id)}"
+        )
         return jsonify({
             "error": "Documento não encontrado"
         }), 404
@@ -287,9 +315,16 @@ def export_document(doc_id):
     )
 
     if not role:
+        logger.warning(
+            f"event=doc_export_forbidden | who={sanitize_log(user_id)} | workspace_id={sanitize_log(document['workspace_id'])} | doc_id={sanitize_log(doc_id)}"
+        )
         return jsonify({
             "error": "access denied"
         }), 403
+
+    logger.info(
+        f"event=doc_export_authorized | who={sanitize_log(user_id)} | workspace_id={sanitize_log(document['workspace_id'])} | doc_id={sanitize_log(doc_id)}"
+    )
 
     r = requests.post(
         f"{WORKSPACE_URL}/read-document",
@@ -304,6 +339,9 @@ def export_document(doc_id):
     )
 
     if r.status_code != 200:
+        logger.error(
+            f"event=doc_export_read_failed | who={sanitize_log(user_id)} | doc_id={sanitize_log(doc_id)} | status={r.status_code}"
+        )
         return jsonify({
             "error": "read failed"
         }), 500
@@ -311,6 +349,10 @@ def export_document(doc_id):
     markdown = r.json()["content"]
 
     safe_filename = sanitize_filename(document["title"])[:100]
+
+    logger.info(
+        f"event=doc_export_success | who={sanitize_log(user_id)} | doc_id={sanitize_log(doc_id)} | filename={sanitize_log(safe_filename)}.md"
+    )
 
     return Response(
         markdown,
