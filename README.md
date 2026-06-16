@@ -47,3 +47,6 @@
 ├── requirements.txt              # Dependências Python
 └── .env                          # Variáveis de ambiente
 ```
+
+
+✅✅✅✅
