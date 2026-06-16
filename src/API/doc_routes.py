@@ -1,6 +1,8 @@
 import uuid
 import requests
 import os
+import re
+from urllib.parse import quote
 
 from flask import Blueprint, request, jsonify, send_file, Response
 from flask_jwt_extended import jwt_required, get_jwt_identity
@@ -10,6 +12,7 @@ from src.infrastructure.persistance.workspace_repository import WorkspaceReposit
 from src.infrastructure.persistance.workspace_member_repository import WorkspaceMemberRepository
 
 from src.infrastructure.logging.logger_config import logger, sanitize_log
+from src.domain.workspace.workspace_name import sanitize_filename
 
 doc_bp = Blueprint("documents", __name__)
 
@@ -307,11 +310,13 @@ def export_document(doc_id):
 
     markdown = r.json()["content"]
 
+    safe_filename = sanitize_filename(document["title"])[:100]
+
     return Response(
         markdown,
         mimetype="text/markdown",
         headers={
             "Content-Disposition":
-            f"attachment; filename={document['title']}.md"
+            f"attachment; filename*=UTF-8''{quote(safe_filename)}.md"
         }
     )

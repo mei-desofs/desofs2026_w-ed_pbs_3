@@ -19,3 +19,9 @@ def validate_workspace_name(name: str) -> str:
         )
 
     return name
+
+def sanitize_filename(filename):
+    if filename is None:
+        return "document"
+
+    return re.sub(r'[^a-zA-Z0-9._ -]', '_', str(filename))
